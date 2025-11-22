@@ -1,0 +1,29 @@
+# Development files
+ticketing/
+.claude/
+tests/
+example/
+.github/
+
+# Config files
+docker-compose*.yml
+biome.json
+tsup.config.ts
+vitest.config.ts
+tsconfig.build.json
+CLAUDE.md
+
+# Source files (dist is published)
+src/
+
+# Git
+.git/
+.gitignore
+
+# Editor
+.vscode/
+.idea/
+
+# Misc
+*.log
+coverage/

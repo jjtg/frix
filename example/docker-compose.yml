@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: frix-example-db
+    environment:
+      POSTGRES_USER: frix
+      POSTGRES_PASSWORD: frix
+      POSTGRES_DB: frix_example
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
