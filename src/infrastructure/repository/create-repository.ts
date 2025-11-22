@@ -331,7 +331,7 @@ export function createRepository<
         criteria as Record<string, unknown>
       );
       const result = await query.executeTakeFirst();
-      return Number((result as { numAffectedRows?: bigint }).numAffectedRows ?? 0);
+      return Number((result as { numUpdatedRows?: bigint }).numUpdatedRows ?? 0);
     },
 
     async deleteMany(criteria: unknown): Promise<number> {

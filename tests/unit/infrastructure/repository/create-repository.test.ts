@@ -918,7 +918,7 @@ describe('createRepository', () => {
 
   describe('updateMany', () => {
     it('should update all matching rows and return count', async () => {
-      mockDb._mockExecuteTakeFirst.mockResolvedValue({ numAffectedRows: 5n });
+      mockDb._mockExecuteTakeFirst.mockResolvedValue({ numUpdatedRows: 5n });
 
       const repo = createRepository(mockDb, 'user');
       const count = await repo.updateMany({ status: 'INACTIVE' }, { status: 'ACTIVE' });
@@ -929,7 +929,7 @@ describe('createRepository', () => {
     });
 
     it('should return 0 when no rows match', async () => {
-      mockDb._mockExecuteTakeFirst.mockResolvedValue({ numAffectedRows: 0n });
+      mockDb._mockExecuteTakeFirst.mockResolvedValue({ numUpdatedRows: 0n });
 
       const repo = createRepository(mockDb, 'user');
       // Using type assertion to test with non-matching value
@@ -942,7 +942,7 @@ describe('createRepository', () => {
     });
 
     it('should update by multiple criteria fields (AND)', async () => {
-      mockDb._mockExecuteTakeFirst.mockResolvedValue({ numAffectedRows: 2n });
+      mockDb._mockExecuteTakeFirst.mockResolvedValue({ numUpdatedRows: 2n });
 
       const repo = createRepository(mockDb, 'user');
       await repo.updateMany({ status: 'INACTIVE', email: 'test@test.com' }, { status: 'ACTIVE' });
@@ -951,7 +951,7 @@ describe('createRepository', () => {
     });
 
     it('should update all rows when criteria is empty', async () => {
-      mockDb._mockExecuteTakeFirst.mockResolvedValue({ numAffectedRows: 100n });
+      mockDb._mockExecuteTakeFirst.mockResolvedValue({ numUpdatedRows: 100n });
 
       const repo = createRepository(mockDb, 'user');
       const count = await repo.updateMany({}, { status: 'ACTIVE' });
