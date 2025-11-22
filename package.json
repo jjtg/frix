@@ -1,5 +1,5 @@
 {
-  "name": "frix",
+  "name": "@jt-dev/frix",
   "version": "0.1.0",
   "description": "A sturdy, easy-to-use TypeScript library for database operations with Kysely",
   "main": "dist/index.js",

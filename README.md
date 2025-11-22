@@ -4,10 +4,10 @@
 
 > Type-safe, auto-generated repository pattern for Kysely
 
-[![npm version](https://img.shields.io/npm/v/frix.svg)](https://www.npmjs.com/package/frix)
+[![npm version](https://img.shields.io/npm/v/@jt-dev/frix.svg)](https://www.npmjs.com/package/@jt-dev/frix)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Coverage](https://img.shields.io/badge/coverage-98.84%25-brightgreen.svg)](https://github.com/gomadare/frix)
+[![Coverage](https://img.shields.io/badge/coverage-98.84%25-brightgreen.svg)](https://github.com/jjtg/frix)
 
 ## Background & Motivation
 
