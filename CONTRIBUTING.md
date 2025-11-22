@@ -155,6 +155,23 @@ tests/
 - Ignore TypeScript errors
 - Break existing tests
 
+## Release Process
+
+Releases are automated via GitHub Actions.
+
+### How It Works
+
+1. **Update version** in `package.json`
+2. **Merge to main** - automatically creates a draft release
+3. **Review** the draft release in GitHub
+4. **Publish** the release - triggers npm publish
+
+### Required Secrets (Maintainers Only)
+
+- `NPM_TOKEN`: npm access token with publish permissions
+  - Generate at https://www.npmjs.com/settings/~/tokens
+  - Add to repo: Settings → Secrets → Actions → New repository secret
+
 ## Questions?
 
 Open an issue for questions or discussions about potential contributions.

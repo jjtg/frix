@@ -39,6 +39,30 @@ const admins = await userRepo.findAllByRoleIn(['ADMIN', 'SUPER_ADMIN']);
 - **Full TypeScript type safety** - Leverages Kysely's type system
 - **Zero code generation** - Works at runtime via Proxy
 
+## Performance
+
+Frix is designed for high performance with minimal overhead:
+
+- **createMany**: ~110,000 ops/sec (10k records)
+- **findAllBy**: ~250,000 ops/sec
+- **count**: ~4,000,000 ops/sec
+
+See [BENCHMARKS.md](./BENCHMARKS.md) for detailed results and methodology.
+
+## Coverage
+
+Code coverage is enforced at 80% threshold for lines, branches, functions, and statements.
+
+Current coverage: **98.84%** lines, **91.44%** branches, **100%** functions
+
+```bash
+# Run tests with coverage
+npm run test:coverage
+
+# Run benchmarks
+npm run benchmark
+```
+
 ## Installation
 
 ```bash
