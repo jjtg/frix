@@ -44,12 +44,13 @@ describe('MappedRepository Integration Tests', () => {
   let db: Kysely<TestDB>;
 
   beforeAll(async () => {
+    // Use same config as CI: port 5433, test_user, frix_test
     db = createDatabase<TestDB>({
       host: 'localhost',
-      port: 5432,
-      user: 'frix',
-      password: 'frix',
-      database: 'frix_example',
+      port: 5433,
+      user: 'test_user',
+      password: 'test_password',
+      database: 'frix_test',
     });
 
     // Ensure table exists (migrations should have run, but create if not)
