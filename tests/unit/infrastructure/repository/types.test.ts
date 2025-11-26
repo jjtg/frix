@@ -1,6 +1,6 @@
 import type { ColumnType, Generated, Kysely } from 'kysely';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { createRepository } from '../../../../src/infrastructure/repository/create-repository';
+import { createRepository } from '../../../../src';
 import type {
   ExtendableRepository,
   Repository,

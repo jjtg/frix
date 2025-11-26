@@ -47,7 +47,7 @@ Frix is designed for high performance with minimal overhead:
 - **findAllBy**: ~247,000 ops/sec
 - **count**: ~4,138,000 ops/sec
 
-See [BENCHMARKS.md](./BENCHMARKS.md) for detailed results and methodology.
+See [BENCHMARKS.md](https://github.com/jjtg/frix/blob/main/BENCHMARKS.md) for detailed results and methodology.
 
 ## Coverage
 
