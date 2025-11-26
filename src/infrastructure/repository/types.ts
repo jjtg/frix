@@ -11,6 +11,20 @@ export type Capitalize<S extends string> = S extends `${infer F}${infer R}`
   ? `${Uppercase<F>}${R}`
   : S;
 
+/**
+ * Convert snake_case to CamelCase for method names.
+ * Recursively splits on underscores and capitalizes each segment.
+ *
+ * @example
+ * SnakeToCamelCase<'user_id'> => 'UserId'
+ * SnakeToCamelCase<'kyc_status'> => 'KycStatus'
+ * SnakeToCamelCase<'api_v2_key'> => 'ApiV2Key'
+ * SnakeToCamelCase<'status'> => 'Status'
+ */
+export type SnakeToCamelCase<S extends string> = S extends `${infer First}_${infer Rest}`
+  ? `${Capitalize<First>}${SnakeToCamelCase<Rest>}`
+  : Capitalize<S>;
+
 /** Base repository methods */
 export type BaseRepository<Row, IdKey extends keyof Row = 'id' extends keyof Row ? 'id' : never> = {
   findAll(): Promise<Row[]>;
@@ -53,12 +67,14 @@ export type QueryBuilderMethods<DB, TName extends keyof DB & string, Row> = {
 
 /** Auto-generated single-column finders (returns single result) */
 export type SimpleFinders<Row> = {
-  [K in keyof Row & string as `findBy${Capitalize<K>}`]: (value: Row[K]) => Promise<Row | null>;
+  [K in keyof Row & string as `findBy${SnakeToCamelCase<K>}`]: (
+    value: Row[K]
+  ) => Promise<Row | null>;
 };
 
 /** Auto-generated multi-result finders (returns array) */
 export type MultiFinders<Row> = {
-  [K in keyof Row & string as `findAllBy${Capitalize<K>}`]: (value: Row[K]) => Promise<Row[]>;
+  [K in keyof Row & string as `findAllBy${SnakeToCamelCase<K>}`]: (value: Row[K]) => Promise<Row[]>;
 };
 
 /** Combined repository type */
