@@ -7,6 +7,7 @@ export {
 export type {
   Repository,
   ExtendableRepository,
+  MappedRepository,
   BaseRepository,
   SimpleFinders,
   MultiFinders,
@@ -18,11 +19,15 @@ export type {
   QueryOptions,
   CreateManyOptions,
   CreateManyCountResult,
+  Transformer,
+  MappedInsertable,
   RawBuilder,
   SelectQueryBuilder,
   Selectable,
   Insertable,
   Updateable,
+  Unwrap,
+  UnwrapRow,
 } from './infrastructure/repository';
 
 // Mappers

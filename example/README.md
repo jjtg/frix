@@ -325,6 +325,92 @@ try {
 }
 ```
 
+### 13. Integrated Repository Mapping (`.withMapper()`)
+
+Create repositories that automatically convert between database rows and DTOs:
+
+```typescript
+import { createRepository, AutoMapper } from 'frix';
+
+// Define row (snake_case) and DTO (camelCase) types
+interface UserRow {
+  id: number;
+  user_name: string;
+  created_at: Date;
+}
+
+interface UserDTO {
+  id: number;
+  userName: string;
+  createdAt: Date;
+}
+
+// Create a mapped repository
+const userDtoRepo = createRepository(db, 'users')
+  .withMapper(new AutoMapper<UserRow, UserDTO>());
+
+// All read operations return DTOs automatically
+const users = await userDtoRepo.findAll();        // UserDTO[]
+const user = await userDtoRepo.findById(1);       // UserDTO | null
+const active = await userDtoRepo.findAllByStatus('ACTIVE'); // UserDTO[]
+
+// Write operations accept DTOs
+const newUser = await userDtoRepo.create({
+  userName: 'Alice',  // camelCase - automatically converted to snake_case
+  status: 'ACTIVE',
+});
+
+// Criteria operations work with DTO-style keys
+const count = await userDtoRepo.count({ userName: 'Alice' });
+const exists = await userDtoRepo.exists({ status: 'ACTIVE' });
+
+// Access raw repository when needed
+const rawUser = await userDtoRepo.raw.findById(1);  // snake_case Row
+```
+
+#### Chaining with `.extend<T>()`
+
+`.withMapper()` is a terminal operation and must be last in the chain:
+
+```typescript
+interface UserQueries {
+  findByEmailAndStatus(email: string, status: string): Promise<UserDTO | null>;
+}
+
+// Correct: extend first, then withMapper
+const repo = createRepository(db, 'users')
+  .extend<UserQueries>()
+  .withMapper(new AutoMapper<UserRow, UserDTO>());
+
+// Now custom queries also return DTOs
+const user = await repo.findByEmailAndStatus('alice@example.com', 'ACTIVE');
+```
+
+#### Using CustomMapper for Complex Transformations
+
+```typescript
+import { CustomMapper } from 'frix';
+
+const summaryMapper = new CustomMapper<UserRow, UserSummaryDTO>({
+  toDto: (row) => ({
+    id: row.id,
+    displayName: row.user_name,
+    isActive: row.status === 'ACTIVE',
+  }),
+  toRow: (dto) => ({
+    id: dto.id,
+    user_name: dto.displayName,
+    status: dto.isActive ? 'ACTIVE' : 'INACTIVE',
+    // ... other required fields
+  }),
+});
+
+const summaryRepo = createRepository(db, 'users')
+  .withMapper(summaryMapper);
+
+const summaries = await summaryRepo.findAll();  // UserSummaryDTO[]
+```
+
 ## Creating Your Own Repositories
 
 ### 1. Define Types

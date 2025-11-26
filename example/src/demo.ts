@@ -1,7 +1,7 @@
 import type { TransactionScope } from 'frix';
-import { checkDatabaseHealth, withTransaction, RepositoryError } from 'frix';
+import { checkDatabaseHealth, withTransaction, RepositoryError, createRepository, AutoMapper } from 'frix';
 import { getDatabase } from './database.js';
-import type { Database } from './types.js';
+import type { Database, User, UserDTO } from './types.js';
 import { createUserRepository, createPostRepository } from './repositories/index.js';
 import { userAutoMapper, userSummaryMapper, postAutoMapper } from './mappers/index.js';
 
@@ -361,6 +361,68 @@ async function main(): Promise<void> {
       console.log('  Message:', error.message.substring(0, 50) + '...');
     }
   }
+  console.log();
+
+  // ========================================
+  // 13. Integrated Repository Mapping (.withMapper())
+  // ========================================
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('13. INTEGRATED REPOSITORY MAPPING (.withMapper())');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+  console.log('Create a mapped repository that returns DTOs automatically:');
+  console.log('  const userDtoRepo = createRepository(db, "users")');
+  console.log('    .withMapper(new AutoMapper<User, UserDTO>());\n');
+
+  // Create mapped repository
+  const userDtoRepo = createRepository<Database, 'users'>(db, 'users').withMapper(
+    new AutoMapper<User, UserDTO>()
+  );
+
+  // Read operations return DTOs (camelCase)
+  console.log('Read operations return DTOs with camelCase keys:');
+  const dtoUsers = await userDtoRepo.findAll();
+  console.log('  findAll() returns UserDTO[] with:');
+  if (dtoUsers.length > 0) {
+    console.log('    - createdAt (not created_at):', typeof dtoUsers[0].createdAt);
+    console.log('    - Sample:', { id: dtoUsers[0].id, createdAt: dtoUsers[0].createdAt });
+  }
+
+  // findById returns DTO
+  console.log('\n  findById(1) returns UserDTO | null:');
+  const singleDto = await userDtoRepo.findById(dtoUsers[0]?.id ?? 1);
+  console.log('    Result:', singleDto ? { id: singleDto.id, createdAt: singleDto.createdAt } : null);
+
+  // Write operations accept DTOs
+  console.log('\nWrite operations accept DTOs (camelCase input):');
+  console.log('  create({ email, name, status }) - no need for snake_case');
+  const newDtoUser = await userDtoRepo.create({
+    email: 'dto-test@example.com',
+    name: 'DTO Test User',
+    status: 'ACTIVE',
+  });
+  console.log('    Created:', { id: newDtoUser.id, createdAt: newDtoUser.createdAt });
+
+  // Update accepts partial DTO
+  console.log('\n  update(id, { name }) - accepts partial DTO');
+  const updatedDto = await userDtoRepo.update(newDtoUser.id, { name: 'Updated DTO User' });
+  console.log('    Updated:', updatedDto?.name);
+
+  // Criteria operations with camelCase
+  console.log('\nCriteria operations work with DTO-style keys:');
+  console.log('  count() / exists() accept camelCase criteria');
+  const dtoCount = await userDtoRepo.count({ status: 'ACTIVE' });
+  console.log('    count({ status: "ACTIVE" }):', dtoCount);
+
+  // Raw access
+  console.log('\nAccess raw repository when needed:');
+  console.log('  userDtoRepo.raw.findById(id) - returns snake_case Row');
+  const rawUser = await userDtoRepo.raw.findById(newDtoUser.id);
+  console.log('    Raw row has created_at:', rawUser?.created_at instanceof Date);
+
+  // Cleanup test user
+  await userDtoRepo.delete(newDtoUser.id);
+  console.log('\nCleaned up DTO test user.');
   console.log();
 
   // ========================================

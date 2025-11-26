@@ -1,17 +1,21 @@
 import type { Kysely, RawBuilder, SelectQueryBuilder } from 'kysely';
 import { sql } from 'kysely';
 import { RepositoryError } from '../../shared/errors/repository-error';
+import { createMappedRepository } from './mapped-repository';
 import { parseFinderMethod } from './parser';
 import type {
   ComparisonOperator,
   CreateManyCountResult,
   CreateManyOptions,
   ExtendableRepository,
+  MappedRepository,
   ParsedMethod,
   QueryOptions,
   Repository,
   RepositoryOptions,
   RowOf,
+  Transformer,
+  UnwrapRow,
 } from './types';
 
 const DEFAULT_CHUNK_SIZE = 1000;
@@ -411,10 +415,26 @@ export function createRepository<
 
   const repository = new Proxy(base, handler) as unknown as Repository<DB, TName, Row, IdKey>;
 
-  // Add extend method for type-safe complex queries
-  return Object.assign(repository, {
-    extend<Queries extends object>(): Repository<DB, TName, Row, IdKey> & Queries {
-      return repository as Repository<DB, TName, Row, IdKey> & Queries;
+  // Create extendable repository with extend and withMapper methods
+  const extendable = Object.assign(repository, {
+    /**
+     * Extends the repository with additional typed query methods.
+     * Returns an ExtendableRepository that can still be chained with withMapper().
+     */
+    extend<Queries extends object>(): ExtendableRepository<DB, TName, Row, IdKey> & Queries {
+      return extendable as ExtendableRepository<DB, TName, Row, IdKey> & Queries;
     },
-  }) as ExtendableRepository<DB, TName, Row, IdKey>;
+
+    /**
+     * Creates a mapped repository that returns DTOs instead of rows.
+     * This is a terminal operation - no further chaining allowed.
+     */
+    withMapper<TDto>(
+      mapper: Transformer<UnwrapRow<Row>, TDto>
+    ): MappedRepository<DB, TName, Row, IdKey, TDto> {
+      return createMappedRepository(repository, mapper as Transformer<Row, TDto>);
+    },
+  });
+
+  return extendable as ExtendableRepository<DB, TName, Row, IdKey>;
 }
