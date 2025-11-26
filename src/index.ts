@@ -6,6 +6,7 @@ export {
 } from './infrastructure/repository';
 export type {
   Repository,
+  ExtendableRepository,
   BaseRepository,
   SimpleFinders,
   MultiFinders,

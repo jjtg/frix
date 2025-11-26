@@ -6,6 +6,7 @@ import type {
   ComparisonOperator,
   CreateManyCountResult,
   CreateManyOptions,
+  ExtendableRepository,
   ParsedMethod,
   QueryOptions,
   Repository,
@@ -207,7 +208,7 @@ export function createRepository<
   db: Kysely<DB>,
   tableName: TName,
   options?: RepositoryOptions<IdKey>
-): Repository<DB, TName, Row, IdKey> {
+): ExtendableRepository<DB, TName, Row, IdKey> {
   // Input validation
   if (!db) {
     throw new RepositoryError(
@@ -408,5 +409,12 @@ export function createRepository<
     },
   };
 
-  return new Proxy(base, handler) as unknown as Repository<DB, TName, Row, IdKey>;
+  const repository = new Proxy(base, handler) as unknown as Repository<DB, TName, Row, IdKey>;
+
+  // Add extend method for type-safe complex queries
+  return Object.assign(repository, {
+    extend<Queries extends object>(): Repository<DB, TName, Row, IdKey> & Queries {
+      return repository as Repository<DB, TName, Row, IdKey> & Queries;
+    },
+  }) as ExtendableRepository<DB, TName, Row, IdKey>;
 }

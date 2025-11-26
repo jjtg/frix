@@ -143,6 +143,43 @@ export type Repository<
   SimpleFinders<Row> &
   MultiFinders<Row>;
 
+/**
+ * Repository with extend capability for adding typed complex queries.
+ *
+ * Use `.extend<Queries>()` to add type-safe complex query methods like
+ * multi-column finders, ordering, and comparison operators.
+ *
+ * @template DB - Database schema type
+ * @template TName - Table name
+ * @template Row - Row type (defaults to table's row type)
+ * @template IdKey - Primary key column name
+ *
+ * @example
+ * ```typescript
+ * interface UserQueries {
+ *   findByEmailAndStatus(email: string, status: string): Promise<User | null>;
+ *   findAllByStatusOrderByNameAsc(status: string): Promise<User[]>;
+ * }
+ *
+ * const userRepo = createRepository(db, 'users').extend<UserQueries>();
+ * const user = await userRepo.findByEmailAndStatus('alice@example.com', 'ACTIVE');
+ * ```
+ */
+export type ExtendableRepository<
+  DB,
+  TName extends keyof DB & string,
+  Row = RowOf<DB, TName>,
+  IdKey extends keyof Row & string = 'id' extends keyof Row & string ? 'id' : never,
+> = Repository<DB, TName, Row, IdKey> & {
+  /**
+   * Extends the repository with additional typed query methods.
+   *
+   * @template Queries - Interface defining complex query method signatures
+   * @returns Repository with base methods and custom query methods
+   */
+  extend<Queries extends object>(): Repository<DB, TName, Row, IdKey> & Queries;
+};
+
 /** Factory options */
 export interface RepositoryOptions<IdKey extends string> {
   idColumn?: IdKey;

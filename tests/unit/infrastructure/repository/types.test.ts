@@ -1,6 +1,8 @@
-import type { ColumnType, Generated } from 'kysely';
+import type { ColumnType, Generated, Kysely } from 'kysely';
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import { createRepository } from '../../../../src/infrastructure/repository/create-repository';
 import type {
+  ExtendableRepository,
   Repository,
   Unwrap,
   UnwrapRow,
@@ -446,6 +448,171 @@ describe('Type Unwrapping - Kysely Generated and ColumnType', () => {
           }
         | undefined
       >();
+    });
+  });
+});
+
+/**
+ * Type-level tests for ExtendableRepository and .extend<T>() method.
+ * These tests verify that complex query methods can be typed explicitly.
+ */
+describe('ExtendableRepository and .extend<T>() Types', () => {
+  interface UserTable {
+    id: Generated<number>;
+    email: string;
+    status: 'ACTIVE' | 'INACTIVE';
+    age: number;
+    created_at: Generated<Date>;
+  }
+
+  interface TestDB {
+    users: UserTable;
+  }
+
+  // For test purposes, define what the unwrapped user looks like
+  interface UnwrappedUser {
+    id: number;
+    email: string;
+    status: 'ACTIVE' | 'INACTIVE';
+    age: number;
+    created_at: Date;
+  }
+
+  interface UserComplexQueries {
+    findByEmailAndStatus(
+      email: string,
+      status: 'ACTIVE' | 'INACTIVE'
+    ): Promise<UnwrappedUser | null>;
+    findAllByStatusOrderByAgeDesc(status: 'ACTIVE' | 'INACTIVE'): Promise<UnwrappedUser[]>;
+    findByAgeGreaterThan(age: number): Promise<UnwrappedUser[]>;
+  }
+
+  // Mock db for type tests
+  const mockDb = {} as Kysely<TestDB>;
+
+  describe('ExtendableRepository type', () => {
+    it('should include extend method in type definition', () => {
+      type TestExtendable = ExtendableRepository<TestDB, 'users', UserTable, 'id'>;
+      expectTypeOf<TestExtendable>().toHaveProperty('extend');
+    });
+
+    it('should include all base repository methods', () => {
+      type TestExtendable = ExtendableRepository<TestDB, 'users', UserTable, 'id'>;
+      expectTypeOf<TestExtendable>().toHaveProperty('findById');
+      expectTypeOf<TestExtendable>().toHaveProperty('findAll');
+      expectTypeOf<TestExtendable>().toHaveProperty('create');
+      expectTypeOf<TestExtendable>().toHaveProperty('update');
+      expectTypeOf<TestExtendable>().toHaveProperty('delete');
+    });
+
+    it('should include simple finder methods', () => {
+      type TestExtendable = ExtendableRepository<TestDB, 'users', UserTable, 'id'>;
+      expectTypeOf<TestExtendable>().toHaveProperty('findByEmail');
+      expectTypeOf<TestExtendable>().toHaveProperty('findByStatus');
+      expectTypeOf<TestExtendable>().toHaveProperty('findAllByEmail');
+      expectTypeOf<TestExtendable>().toHaveProperty('findAllByStatus');
+    });
+  });
+
+  describe('createRepository().extend<T>() type inference', () => {
+    it('should return ExtendableRepository with extend method', () => {
+      const repo = createRepository(mockDb, 'users');
+      expectTypeOf(repo).toHaveProperty('extend');
+      expectTypeOf(repo.extend).toBeFunction();
+    });
+
+    it('should type complex query parameters correctly after extend', () => {
+      const repo = createRepository(mockDb, 'users').extend<UserComplexQueries>();
+
+      // First parameter should be string (email)
+      expectTypeOf(repo.findByEmailAndStatus).parameter(0).toBeString();
+      // Second parameter should be 'ACTIVE' | 'INACTIVE'
+      expectTypeOf(repo.findByEmailAndStatus).parameter(1).toEqualTypeOf<'ACTIVE' | 'INACTIVE'>();
+    });
+
+    it('should type complex query return types correctly after extend', () => {
+      const repo = createRepository(mockDb, 'users').extend<UserComplexQueries>();
+
+      // Return type for single finder (check function return type without executing)
+      expectTypeOf(
+        repo.findByEmailAndStatus
+      ).returns.resolves.toEqualTypeOf<UnwrappedUser | null>();
+
+      // Return type for multi finder
+      expectTypeOf(repo.findAllByStatusOrderByAgeDesc).returns.resolves.toEqualTypeOf<
+        UnwrappedUser[]
+      >();
+    });
+
+    it('should preserve base repository methods after extend', () => {
+      const repo = createRepository(mockDb, 'users').extend<UserComplexQueries>();
+
+      expectTypeOf(repo.findById).toBeFunction();
+      expectTypeOf(repo.findAll).toBeFunction();
+      expectTypeOf(repo.create).toBeFunction();
+      expectTypeOf(repo.update).toBeFunction();
+      expectTypeOf(repo.delete).toBeFunction();
+    });
+
+    it('should preserve simple finder methods after extend', () => {
+      const repo = createRepository(mockDb, 'users').extend<UserComplexQueries>();
+
+      expectTypeOf(repo.findByEmail).toBeFunction();
+      expectTypeOf(repo.findAllByStatus).toBeFunction();
+    });
+
+    it('should work without calling extend (backward compatible)', () => {
+      const repo = createRepository(mockDb, 'users');
+
+      // All base methods should work
+      expectTypeOf(repo.findById).toBeFunction();
+      expectTypeOf(repo.findByEmail).toBeFunction();
+      expectTypeOf(repo.findAll).toBeFunction();
+    });
+
+    it('should allow empty Queries type in extend', () => {
+      // biome-ignore lint/complexity/noBannedTypes: testing empty type
+      const repo = createRepository(mockDb, 'users').extend<{}>();
+
+      // Base methods should still work
+      expectTypeOf(repo.findById).toBeFunction();
+      expectTypeOf(repo.findAll).toBeFunction();
+    });
+
+    it('should work with custom id column', () => {
+      interface ProductTable {
+        sku: string;
+        name: string;
+        price: number;
+      }
+
+      interface ProductDB {
+        products: ProductTable;
+      }
+
+      interface ProductQueries {
+        findByNameAndSku(name: string, sku: string): Promise<ProductTable | null>;
+      }
+
+      const productDb = {} as Kysely<ProductDB>;
+      const repo = createRepository(productDb, 'products', {
+        idColumn: 'sku',
+      }).extend<ProductQueries>();
+
+      // findById should accept string (sku type)
+      expectTypeOf(repo.findById).parameter(0).toBeString();
+      // Custom query should be typed
+      expectTypeOf(repo.findByNameAndSku).toBeFunction();
+    });
+
+    it('should not lose extend method type after calling extend', () => {
+      // After extend, the result should still have proper typing
+      const repo = createRepository(mockDb, 'users').extend<UserComplexQueries>();
+
+      // Custom queries should be available
+      expectTypeOf(repo.findByEmailAndStatus).toBeFunction();
+      expectTypeOf(repo.findAllByStatusOrderByAgeDesc).toBeFunction();
+      expectTypeOf(repo.findByAgeGreaterThan).toBeFunction();
     });
   });
 });

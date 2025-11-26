@@ -1187,4 +1187,108 @@ describe('createRepository', () => {
       expect(mockExistsBuilder.limit).toHaveBeenCalledWith(1);
     });
   });
+
+  describe('extend() method', () => {
+    interface UserComplexQueries {
+      findByEmailAndStatus(email: string, status: string): Promise<UserTable | null>;
+      findAllByStatusOrderByEmailDesc(status: string): Promise<UserTable[]>;
+    }
+
+    it('should return repository with extend method', () => {
+      const repo = createRepository(mockDb, 'user');
+      expect(typeof repo.extend).toBe('function');
+    });
+
+    it('should return same repository instance from extend', () => {
+      const repo = createRepository(mockDb, 'user');
+      const extended = repo.extend<UserComplexQueries>();
+
+      // extend() should return the same underlying repository
+      expect(extended.findById).toBe(repo.findById);
+      expect(extended.findAll).toBe(repo.findAll);
+      expect(extended.create).toBe(repo.create);
+    });
+
+    it('should execute complex query methods via proxy after extend', async () => {
+      mockDb._mockExecuteTakeFirst.mockResolvedValue({
+        id: 1,
+        email: 'test@example.com',
+        status: 'ACTIVE',
+      });
+
+      const repo = createRepository(mockDb, 'user').extend<UserComplexQueries>();
+      const result = await repo.findByEmailAndStatus('test@example.com', 'ACTIVE');
+
+      expect(result).toEqual({ id: 1, email: 'test@example.com', status: 'ACTIVE' });
+      expect(mockDb._mockWhere).toHaveBeenCalledWith('email', '=', 'test@example.com');
+      expect(mockDb._mockWhere).toHaveBeenCalledWith('status', '=', 'ACTIVE');
+    });
+
+    it('should execute complex query with ordering after extend', async () => {
+      mockDb._mockExecute.mockResolvedValue([
+        { id: 1, email: 'z@example.com', status: 'ACTIVE' },
+        { id: 2, email: 'a@example.com', status: 'ACTIVE' },
+      ]);
+
+      const repo = createRepository(mockDb, 'user').extend<UserComplexQueries>();
+      const results = await repo.findAllByStatusOrderByEmailDesc('ACTIVE');
+
+      expect(results).toHaveLength(2);
+      expect(mockDb._mockWhere).toHaveBeenCalledWith('status', '=', 'ACTIVE');
+      expect(mockDb._mockOrderBy).toHaveBeenCalledWith('email', 'desc');
+    });
+
+    it('should preserve base method functionality after extend', async () => {
+      mockDb._mockExecuteTakeFirst.mockResolvedValue({
+        id: 1,
+        email: 'test@example.com',
+        status: 'ACTIVE',
+      });
+
+      const repo = createRepository(mockDb, 'user').extend<UserComplexQueries>();
+      const user = await repo.findById(1);
+
+      expect(user).toEqual({ id: 1, email: 'test@example.com', status: 'ACTIVE' });
+    });
+
+    it('should preserve simple finder methods after extend', async () => {
+      mockDb._mockExecuteTakeFirst.mockResolvedValue({
+        id: 1,
+        email: 'test@example.com',
+        status: 'ACTIVE',
+      });
+
+      const repo = createRepository(mockDb, 'user').extend<UserComplexQueries>();
+      const user = await repo.findByEmail('test@example.com');
+
+      expect(user).toEqual({ id: 1, email: 'test@example.com', status: 'ACTIVE' });
+      expect(mockDb._mockWhere).toHaveBeenCalledWith('email', '=', 'test@example.com');
+    });
+
+    it('should throw for invalid method names after extend', () => {
+      interface InvalidQueries {
+        invalidMethod(): Promise<void>;
+      }
+
+      const repo = createRepository(mockDb, 'user').extend<InvalidQueries>();
+
+      // Accessing an invalid method throws synchronously via the Proxy
+      expect(() => repo.invalidMethod).toThrow(RepositoryError);
+    });
+
+    it('should work with comparison operators after extend', async () => {
+      interface AgeQueries {
+        findByAgeGreaterThan(age: number): Promise<UserTable[]>;
+      }
+
+      mockDb._mockExecute.mockResolvedValue([
+        { id: 1, email: 'adult@example.com', status: 'ACTIVE', age: 25 },
+      ]);
+
+      const repo = createRepository(mockDb, 'user').extend<AgeQueries>();
+      await repo.findByAgeGreaterThan(18);
+
+      expect(mockDb._mockWhere).toHaveBeenCalledWith('age', '>', 18);
+    });
+  });
 });

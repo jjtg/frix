@@ -269,6 +269,33 @@ findAllBy{Column}OrderBy{Column}Desc → ORDER BY column DESC
 - `findByUserId` → `WHERE user_id = ?`
 - `findByCreatedAt` → `WHERE created_at = ?`
 
+### Type-Safe Complex Queries
+
+For complex finder methods (multi-column, ordering, comparisons), define a query interface and use `.extend<T>()`:
+
+```typescript
+// Define your complex queries (like Spring Data JPA)
+interface UserQueries {
+  findByEmailAndStatus(email: string, status: string): Promise<User | null>;
+  findAllByStatusOrderByNameAsc(status: string): Promise<User[]>;
+  findByAgeGreaterThan(age: number): Promise<User[]>;
+}
+
+// Create typed repository
+const userRepo = createRepository(db, 'users').extend<UserQueries>();
+
+// Full type safety - no @ts-expect-error needed!
+const user = await userRepo.findByEmailAndStatus('alice@example.com', 'ACTIVE');
+const sorted = await userRepo.findAllByStatusOrderByNameAsc('ACTIVE');
+const adults = await userRepo.findByAgeGreaterThan(18);
+```
+
+The `.extend<T>()` method:
+- Preserves type inference for database and table
+- Adds your custom query types
+- Returns the same repository instance (zero overhead)
+- Is fully optional - simple queries work without it
+
 ### Transactions
 
 ```typescript
@@ -426,14 +453,12 @@ const db = createDatabase<Database>({
 ## Limitations
 
 - **PostgreSQL only** - MySQL/SQLite support planned
-- **Dynamic methods not fully typed** - Use `@ts-expect-error` for complex finders
 - **Peer dependency on Kysely** - You manage the Kysely version
 - **No relations** - Use `query()` for joins
 
 ## Roadmap
 
 - [ ] MySQL and SQLite dialect support
-- [ ] Better type inference for dynamic methods
 - [ ] Soft delete support (`deletedAt`)
 - [ ] Automatic audit fields (`createdAt`, `updatedAt`)
 
