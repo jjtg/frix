@@ -1,4 +1,5 @@
 import { RepositoryError } from '../../shared/errors/repository-error';
+import { toSnakeCase } from './mapper/utils';
 import type { ComparisonOperator, ParsedColumn, ParsedMethod } from './types';
 
 const FINDER_PREFIXES = ['findAllBy', 'findBy'] as const;
@@ -25,27 +26,6 @@ const COMPARISON_MAP: Record<(typeof COMPARISON_SUFFIXES)[number], ComparisonOpe
   Like: 'like',
   In: 'in',
 };
-
-/**
- * Convert camelCase to snake_case.
- * Handles consecutive uppercase letters including at start of string.
- * @example toSnakeCase('userId') => 'user_id'
- * @example toSnakeCase('createdAt') => 'created_at'
- * @example toSnakeCase('userID') => 'user_id'
- * @example toSnakeCase('XMLHttpRequest') => 'xml_http_request'
- */
-function toSnakeCase(str: string): string {
-  return (
-    str
-      // 1. Handle leading uppercase sequences (XMLHttp → XML_Http)
-      .replace(/^([A-Z]+)([A-Z][a-z])/, '$1_$2')
-      // 2. Handle uppercase sequences in the middle (myXMLParser → myXML_Parser)
-      .replace(/([a-z\d])([A-Z]+)([A-Z][a-z])/g, '$1_$2_$3')
-      // 3. Handle single uppercase (userId → user_Id)
-      .replace(/([a-z\d])([A-Z])/g, '$1_$2')
-      .toLowerCase()
-  );
-}
 
 /**
  * Parses a finder method name into column names.

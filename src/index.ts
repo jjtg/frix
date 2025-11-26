@@ -24,6 +24,16 @@ export type {
   Updateable,
 } from './infrastructure/repository';
 
+// Mappers
+export {
+  AutoMapper,
+  CustomMapper,
+  convertObjectKeys,
+  toCamelCase,
+  toSnakeCase,
+} from './infrastructure/repository/mapper';
+export type { Mapper } from './infrastructure/repository/mapper';
+
 // Database
 export {
   createDatabase,
