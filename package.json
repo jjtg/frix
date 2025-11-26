@@ -1,6 +1,6 @@
 {
   "name": "@jt-dev/frix",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A sturdy, easy-to-use TypeScript library for database operations with Kysely",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -53,12 +53,12 @@
     "husky": "^8.0.3",
     "kanel": "^3.6.0",
     "kanel-kysely": "^0.3.0",
+    "kysely": "^0.27.4",
     "tsup": "^8.0.0",
     "typescript": "^5.3.0",
     "vitest": "^1.0.0"
   },
   "dependencies": {
-    "kysely": "^0.27.0",
     "kysely-ctl": "^0.19.0",
     "pg": "^8.11.0"
   },

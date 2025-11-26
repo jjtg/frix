@@ -66,8 +66,10 @@ npm run benchmark
 ## Installation
 
 ```bash
-npm install frix kysely pg
+npm install @jt-dev/frix kysely pg
 ```
+
+**Note**: Kysely is a peer dependency and must be installed separately.
 
 ## Quick Start
 
@@ -315,7 +317,7 @@ Contributions are welcome! Please follow these steps:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Write tests first (TDD is required)
+3. Write tests for your changes
 4. Implement the feature
 5. Ensure all tests pass (`npm test`)
 6. Run linting (`npm run check`)
