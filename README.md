@@ -346,4 +346,4 @@ MIT
 
 ---
 
-**Frix** - Because database access should be simple, type-safe, and fast.
+**Frix** - Because database access should be simple, type-safe, and fast (when possible).
