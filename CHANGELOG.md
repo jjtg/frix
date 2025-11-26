@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2025-11-26
+
+### Added
+
+- **DTO Mapping System (Phase 1)**
+  - `AutoMapper<TRow, TDto>` - Convention-based snake_case ↔ camelCase conversion
+  - `CustomMapper<TRow, TDto>` - Explicit custom transformation logic
+  - `Mapper<TRow, TDto>` interface - Common contract for all mappers
+  - Utility functions: `toCamelCase()`, `toSnakeCase()`, `convertObjectKeys()`
+  - Support for nested objects, arrays, and special types (Date, null, undefined)
+  - 48 new tests (utils, AutoMapper, CustomMapper)
+  - Phase 2 will integrate mappers into `createRepository()`
+
+### Technical
+
+- Extracted `toSnakeCase()` from parser to mapper utils (DRY)
+- Total tests: 249 passing
+- Coverage maintained at 98.84%
+
 ## [0.3.2] - 2025-11-26
 
 ### Fixed
