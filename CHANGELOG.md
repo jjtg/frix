@@ -26,11 +26,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `update()` and `updateMany()` accept `Updateable<Row>` (correct Kysely type)
   - No runtime changes - purely compile-time improvements
 
+### Fixed
+
+- Updated test table types to properly use `Generated<T>` for auto-generated fields
+- Fixed test mocks to use `UnwrapRow<T>` for returned data (represents SELECT results)
+- Corrected custom ID column test to provide proper insertable data
+
 ### Technical
 
 - Zero runtime overhead (compile-time only transformations)
 - Backward compatible with simple types (non-Generated tables work unchanged)
 - Total tests: 282 passing (33 new type-level tests)
+- Coverage: 96.31% lines, 92.3% branches, 97.72% functions
+- Performance benchmarks:
+  - createMany (10k): ~118,000 ops/sec
+  - findAllBy: ~247,000 ops/sec
+  - count: ~4,139,000 ops/sec
 
 ## [0.3.3] - 2025-11-26
 

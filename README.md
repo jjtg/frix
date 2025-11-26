@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/@jt-dev/frix.svg)](https://www.npmjs.com/package/@jt-dev/frix)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Coverage](https://img.shields.io/badge/coverage-98.84%25-brightgreen.svg)](https://github.com/jjtg/frix)
+[![Coverage](https://img.shields.io/badge/coverage-96.31%25-brightgreen.svg)](https://github.com/jjtg/frix)
 
 ## Background & Motivation
 
@@ -43,9 +43,9 @@ const admins = await userRepo.findAllByRoleIn(['ADMIN', 'SUPER_ADMIN']);
 
 Frix is designed for high performance with minimal overhead:
 
-- **createMany**: ~110,000 ops/sec (10k records)
-- **findAllBy**: ~250,000 ops/sec
-- **count**: ~4,000,000 ops/sec
+- **createMany**: ~118,000 ops/sec (10k records)
+- **findAllBy**: ~247,000 ops/sec
+- **count**: ~4,138,000 ops/sec
 
 See [BENCHMARKS.md](./BENCHMARKS.md) for detailed results and methodology.
 
@@ -53,7 +53,7 @@ See [BENCHMARKS.md](./BENCHMARKS.md) for detailed results and methodology.
 
 Code coverage is enforced at 80% threshold for lines, branches, functions, and statements.
 
-Current coverage: **98.84%** lines, **91.44%** branches, **100%** functions
+Current coverage: **96.31%** lines, **92.3%** branches, **97.72%** functions
 
 ```bash
 # Run tests with coverage

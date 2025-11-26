@@ -14,17 +14,17 @@ Results from `npm run benchmark` (tests/integration/performance.test.ts):
 
 | Operation | Records | Duration | Ops/sec |
 |-----------|---------|----------|---------|
-| createMany | 1,000 | ~25ms | ~40,000 |
-| createMany | 10,000 | ~90ms | ~110,000 |
-| createMany (parallel) | 5,000 | ~32ms | ~156,000 |
-| findAllBy | 1,000 | ~4ms | ~250,000 |
-| findAllBy (ordered) | 1,000 | ~4ms | ~250,000 |
-| updateMany | 1,000 | ~5ms | ~200,000 |
-| deleteMany | 1,000 | ~2ms | ~500,000 |
-| count | 10,000 | ~2ms | ~4,000,000 |
-| exists | 1 | ~3ms | ~330 |
-| transaction (100 ops) | 100 | ~38ms | ~2,600 |
-| complex query | 1 | ~3ms | ~360 |
+| createMany | 1,000 | ~26ms | ~39,000 |
+| createMany | 10,000 | ~85ms | ~118,000 |
+| createMany (parallel) | 5,000 | ~32ms | ~159,000 |
+| findAllBy | 1,000 | ~5ms | ~220,000 |
+| findAllBy (ordered) | 1,000 | ~4ms | ~247,000 |
+| updateMany | 1,000 | ~5ms | ~207,000 |
+| deleteMany | 1,000 | ~2ms | ~621,000 |
+| count | 10,000 | ~2ms | ~4,139,000 |
+| exists | 1 | ~3ms | ~399 |
+| transaction (100 ops) | 100 | ~32ms | ~3,150 |
+| complex query | 1 | ~3ms | ~359 |
 
 ## Running Benchmarks
 

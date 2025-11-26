@@ -1,15 +1,15 @@
-import type { Kysely } from 'kysely';
+import type { Generated, Insertable, Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createDatabase, createRepository, withTransaction } from '../../src';
 
 // Test database types
 interface BenchmarkTable {
-  id: number;
+  id: Generated<number>;
   name: string;
   email: string;
   status: 'ACTIVE' | 'INACTIVE';
   score: number;
-  created_at?: Date;
+  created_at: Generated<Date>;
 }
 
 interface TestDB {
@@ -42,7 +42,7 @@ async function benchmark(
 }
 
 // Generate test data
-function generateUsers(count: number): Array<Omit<BenchmarkTable, 'id' | 'created_at'>> {
+function generateUsers(count: number): Array<Insertable<BenchmarkTable>> {
   return Array.from({ length: count }, (_, i) => ({
     name: `User ${i}`,
     email: `user${i}@test.com`,
