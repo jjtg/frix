@@ -175,9 +175,31 @@ export type ExtendableRepository<
    * Extends the repository with additional typed query methods.
    *
    * @template Queries - Interface defining complex query method signatures
-   * @returns Repository with base methods and custom query methods
+   * @returns Repository with base methods and custom query methods (chainable)
    */
-  extend<Queries extends object>(): Repository<DB, TName, Row, IdKey> & Queries;
+  extend<Queries extends object>(): ExtendableRepository<DB, TName, Row, IdKey> & Queries;
+
+  /**
+   * Creates a mapped repository that returns DTOs instead of rows.
+   * This is a terminal operation - no further chaining allowed.
+   *
+   * @template TDto - The DTO type to map to/from
+   * @param mapper - Mapper instance or transformer with toDto/toRow functions
+   * @returns MappedRepository that automatically converts between Row and TDto
+   *
+   * @example
+   * ```typescript
+   * const mappedRepo = createRepository(db, 'users')
+   *   .extend<UserQueries>()
+   *   .withMapper(new AutoMapper<UserRow, UserDTO>());
+   *
+   * // Now all operations work with DTOs
+   * const users = await mappedRepo.findAll(); // UserDTO[]
+   * ```
+   */
+  withMapper<TDto>(
+    mapper: Transformer<UnwrapRow<Row>, TDto>
+  ): MappedRepository<DB, TName, Row, IdKey, TDto>;
 };
 
 /** Factory options */
@@ -234,3 +256,111 @@ export interface CreateManyCountResult {
 
 /** Re-export Kysely types for query builder access */
 export type { RawBuilder, SelectQueryBuilder };
+
+// ============================================================================
+// Mapped Repository Types
+// ============================================================================
+
+/**
+ * Bidirectional transformer for read/write operations.
+ * Can be a Mapper instance or inline functions.
+ *
+ * @template TRow - Database row type
+ * @template TDto - DTO (Data Transfer Object) type
+ *
+ * @example
+ * ```typescript
+ * const transformer: Transformer<UserRow, UserDTO> = {
+ *   toDto: (row) => ({ id: row.id, userName: row.user_name }),
+ *   toRow: (dto) => ({ id: dto.id, user_name: dto.userName })
+ * };
+ * ```
+ */
+export interface Transformer<TRow, TDto> {
+  toDto(row: TRow): TDto;
+  toRow(dto: TDto): Insertable<TRow>;
+}
+
+/**
+ * Helper type for insertable DTO (omits generated fields like 'id').
+ * Maps DTO field names, not Row field names.
+ *
+ * @template TDto - The DTO type
+ * @template IdKey - The primary key field name in the DTO
+ *
+ * @example
+ * ```typescript
+ * // If TDto = { id: number; name: string } and IdKey = 'id'
+ * // Result: { name: string; id?: number }
+ * ```
+ */
+export type MappedInsertable<TDto, IdKey extends string> = IdKey extends keyof TDto
+  ? Omit<TDto, IdKey> & Partial<Pick<TDto, IdKey & keyof TDto>>
+  : TDto;
+
+/**
+ * Repository that automatically converts between Row and DTO.
+ * This is a terminal type - no further chaining allowed after withMapper().
+ *
+ * @template DB - Database schema type
+ * @template TName - Table name
+ * @template Row - Database row type
+ * @template IdKey - Primary key column name
+ * @template TDto - DTO type that will be returned/accepted
+ *
+ * @example
+ * ```typescript
+ * const mappedRepo = createRepository(db, 'users')
+ *   .withMapper(new AutoMapper<UserRow, UserDTO>());
+ *
+ * // All read operations return UserDTO
+ * const users = await mappedRepo.findAll(); // UserDTO[]
+ * const user = await mappedRepo.findById(1); // UserDTO | null
+ *
+ * // Write operations accept UserDTO
+ * const created = await mappedRepo.create({ userName: 'Alice' }); // UserDTO
+ *
+ * // Access raw repository when needed
+ * const rawUser = await mappedRepo.raw.findById(1); // UserRow
+ * ```
+ */
+export type MappedRepository<
+  DB,
+  TName extends keyof DB & string,
+  Row,
+  IdKey extends keyof Row & string,
+  TDto,
+> = {
+  // Read operations return TDto
+  findAll(): Promise<TDto[]>;
+  findById(id: Unwrap<Row[IdKey]>): Promise<TDto | null>;
+
+  // Write operations accept partial TDto (without generated fields), return TDto
+  create(data: MappedInsertable<TDto, IdKey & string>): Promise<TDto>;
+  update(id: Unwrap<Row[IdKey]>, data: Partial<TDto>): Promise<TDto | null>;
+  delete(id: Unwrap<Row[IdKey]>): Promise<boolean>;
+  save(data: TDto): Promise<TDto>;
+
+  // Batch operations
+  createMany(
+    data: Array<MappedInsertable<TDto, IdKey & string>>,
+    options?: CreateManyOptions & { skipReturn?: false }
+  ): Promise<TDto[]>;
+  createMany(
+    data: Array<MappedInsertable<TDto, IdKey & string>>,
+    options: CreateManyOptions & { skipReturn: true }
+  ): Promise<CreateManyCountResult>;
+  updateMany(criteria: Partial<TDto>, data: Partial<TDto>): Promise<number>;
+  deleteMany(criteria: Partial<TDto>): Promise<number>;
+
+  // Query utilities (unchanged - work with criteria)
+  count(criteria?: Partial<TDto>): Promise<number>;
+  exists(criteria?: Partial<TDto>): Promise<boolean>;
+
+  // Query builder returns raw - user handles mapping
+  query(): SelectQueryBuilder<DB, TName, Row>;
+  rawQuery<T>(rawBuilder: RawBuilder<T>): Promise<T[]>;
+
+  // Access to underlying unmapped repository
+  raw: Repository<DB, TName, Row, IdKey>;
+};

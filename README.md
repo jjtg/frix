@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/@jt-dev/frix.svg)](https://www.npmjs.com/package/@jt-dev/frix)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Coverage](https://img.shields.io/badge/coverage-96.31%25-brightgreen.svg)](https://github.com/jjtg/frix)
+[![Coverage](https://img.shields.io/badge/coverage-96.11%25-brightgreen.svg)](https://github.com/jjtg/frix)
 
 ## Background & Motivation
 
@@ -47,13 +47,13 @@ Frix is designed for high performance with minimal overhead:
 - **findAllBy**: ~247,000 ops/sec
 - **count**: ~4,138,000 ops/sec
 
-See [BENCHMARKS.md](./BENCHMARKS.md) for detailed results and methodology.
+See [BENCHMARKS.md](https://github.com/jjtg/frix/blob/main/BENCHMARKS.md) for detailed results and methodology.
 
 ## Coverage
 
 Code coverage is enforced at 80% threshold for lines, branches, functions, and statements.
 
-Current coverage: **96.31%** lines, **92.3%** branches, **97.72%** functions
+Current coverage: **96.11%** lines, **90.79%** branches, **98.36%** functions
 
 ```bash
 # Run tests with coverage
@@ -163,17 +163,17 @@ interface UserTable {
 
 const userRepo = createRepository(db, 'users');
 
-// ✅ Works with primitives (not Generated<number>)
+// Works with primitives (not Generated<number>)
 const user = await userRepo.findById(1);        // id: number (not Generated<number>)
 const byEmail = await userRepo.findByEmail('alice@example.com');
 
-// ✅ create() omits Generated fields automatically
+// create() omits Generated fields automatically
 const newUser = await userRepo.create({
   email: 'bob@example.com',
   // No need to provide 'id' or 'created_at'
 });
 
-// ✅ Returns unwrapped types
+// Returns unwrapped types
 console.log(newUser.id);         // number
 console.log(newUser.created_at); // Date
 ```
@@ -403,7 +403,38 @@ const dto = mapper.toDto(row);
 // → { id: 1, fullName: 'Alice Smith', isActive: true }
 ```
 
-**Note**: Phase 2 will integrate mappers directly into `createRepository()` for automatic conversion on all repository methods.
+#### Integrated Repository Mapping with `.withMapper()`
+
+Create repositories that automatically convert between database rows and DTOs:
+
+```typescript
+import { createRepository, AutoMapper } from 'frix';
+
+// Create a mapped repository - all operations work with DTOs
+const userDtoRepo = createRepository(db, 'users')
+  .withMapper(new AutoMapper<UserRow, UserDTO>());
+
+// Read operations return DTOs automatically
+const users = await userDtoRepo.findAll();        // UserDTO[]
+const user = await userDtoRepo.findById(1);       // UserDTO | null
+
+// Write operations accept DTOs
+const newUser = await userDtoRepo.create({
+  userName: 'Alice',  // camelCase input
+  status: 'ACTIVE',
+});
+
+// Access raw repository when needed
+const rawUser = await userDtoRepo.raw.findById(1);  // snake_case Row
+```
+
+Chain with `.extend<T>()` for custom queries (`.withMapper()` must be last):
+
+```typescript
+const repo = createRepository(db, 'users')
+  .extend<UserQueries>()    // Add custom query types
+  .withMapper(mapper);       // Terminal operation - returns DTOs
+```
 
 ### Health Check
 

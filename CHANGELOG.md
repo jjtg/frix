@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] - 2025-11-26
+
+### Added
+
+- **Integrated Repository Mapping via `.withMapper()`**
+  - `createRepository(db, 'table').withMapper(mapper)` - Automatic DTO conversion
+  - `MappedRepository` type - Repository that returns DTOs instead of rows
+  - `Transformer<TRow, TDto>` interface - Contract for toDto/toRow transformations
+  - `MappedInsertable` helper type - Proper typing for create operations
+  - Works with `AutoMapper` (convention-based) and `CustomMapper` (explicit)
+  - `.raw` property for unmapped repository access (escape hatch)
+  - Chain with `.extend<T>().withMapper()` for typed complex queries returning DTOs
+  - Criteria key conversion (camelCase → snake_case) for `count()`/`exists()`
+
+- **Integration Tests for MappedRepository**
+  - 22 integration tests against real PostgreSQL
+  - Covers all repository operations with mapper transformations
+  - Tests verify both return values AND database state
+
+### Technical
+
+- Proxy-based implementation with minimal overhead
+- 27 unit tests for MappedRepository
+- 22 integration tests (new)
+- Total tests: 351 passing (329 unit + 22 integration)
+- Coverage: 96.11% lines, 90.79% branches, 98.36% functions
+
 ## [0.3.5] - 2025-11-26
 
 ### Added

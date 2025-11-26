@@ -46,3 +46,4 @@ docker compose -f docker-compose.test.yml down
 - Connection pooling is enabled by default
 - The `createMany` operation uses chunked inserts for large datasets
 - Parallel execution can significantly improve throughput for bulk operations
+- `.withMapper()` adds minimal overhead (single proxy wrap, handlers created once per repository)
