@@ -163,10 +163,27 @@ async function main(): Promise<void> {
   const descUsers = await userRepo.findAllByStatusOrderByNameDesc('ACTIVE');
   console.log('  Ordered:', descUsers.map((u) => u.name));
 
-  // Pagination (with options)
-  console.log('\nfindAllByStatus("ACTIVE", { limit: 1, offset: 1 })');
-  const paginated = await userRepo.findAllByStatus('ACTIVE', { limit: 1, offset: 1 });
-  console.log('  Page 2 (1 item):', paginated.map((u) => u.name));
+  // Pagination - Basic limit and offset
+  console.log('\n--- Pagination Examples ---');
+  console.log('\nfindAllByStatus("ACTIVE", { limit: 2 }) - First page');
+  const page1 = await userRepo.findAllByStatus('ACTIVE', { limit: 2 });
+  console.log('  Page 1:', page1.map((u) => u.name));
+
+  console.log('\nfindAllByStatus("ACTIVE", { limit: 2, offset: 2 }) - Second page');
+  const page2 = await userRepo.findAllByStatus('ACTIVE', { limit: 2, offset: 2 });
+  console.log('  Page 2:', page2.map((u) => u.name));
+
+  // Pagination with ordering
+  console.log('\nfindAllByStatusOrderByNameAsc("ACTIVE", { limit: 2 }) - Sorted + paginated');
+  const sortedPage = await userRepo.findAllByStatusOrderByNameAsc('ACTIVE', { limit: 2 });
+  console.log('  First 2 (sorted):', sortedPage.map((u) => u.name));
+
+  // Get total count for pagination UI
+  console.log('\nPagination helper pattern:');
+  const pageSize = 2;
+  const total = await userRepo.count({ status: 'ACTIVE' });
+  const totalPages = Math.ceil(total / pageSize);
+  console.log(`  Total: ${total} users, ${totalPages} pages (${pageSize} per page)`);
   console.log();
 
   // ========================================

@@ -31,9 +31,15 @@ interface UserQueries {
   findAllByStatusIn(statuses: string[]): Promise<User[]>;
   findAllByEmailLike(pattern: string): Promise<User[]>;
 
-  // Ordering
-  findAllByStatusOrderByNameAsc(status: string): Promise<User[]>;
-  findAllByStatusOrderByNameDesc(status: string): Promise<User[]>;
+  // Ordering (with optional pagination)
+  findAllByStatusOrderByNameAsc(
+    status: string,
+    options?: { limit?: number; offset?: number }
+  ): Promise<User[]>;
+  findAllByStatusOrderByNameDesc(
+    status: string,
+    options?: { limit?: number; offset?: number }
+  ): Promise<User[]>;
 
   // Pagination (accepts options object)
   findAllByStatus(

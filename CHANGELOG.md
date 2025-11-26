@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7] - 2025-11-26
+
+### Changed
+
+- **Documentation Improvements**
+  - Simplified DTO Mapping section in README - removed redundant manual mapper examples
+  - Added dedicated Pagination section with comprehensive examples
+  - Updated demo.ts with expanded pagination examples (page navigation, sorted pagination, total count pattern)
+
+### Fixed
+
+- Integration tests now use correct CI database configuration (port 5433, test_user credentials)
+
+### Removed
+
+- Removed `example/src/mappers/` directory - manual mapper examples replaced by `.withMapper()` approach
+- Removed manual mapper demo (section 10) from example demo.ts
+
 ## [0.3.6] - 2025-11-26
 
 ### Added
