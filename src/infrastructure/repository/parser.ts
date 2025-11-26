@@ -1,5 +1,5 @@
 import { RepositoryError } from '../../shared/errors/repository-error';
-import { toSnakeCase } from './mapper/utils';
+import { toSnakeCase } from './mapper';
 import type { ComparisonOperator, ParsedColumn, ParsedMethod } from './types';
 
 const FINDER_PREFIXES = ['findAllBy', 'findBy'] as const;

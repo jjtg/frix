@@ -1,5 +1,5 @@
 import type { Insertable } from 'kysely';
-import { toSnakeCase } from './mapper/utils';
+import { toSnakeCase } from './mapper';
 import type {
   CreateManyCountResult,
   CreateManyOptions,

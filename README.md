@@ -313,99 +313,11 @@ await withTransaction(db, async (trx) => {
 
 ### DTO Mapping
 
-Map database rows (snake_case) to DTOs (camelCase) automatically or with custom logic.
+Map database rows (snake_case) to DTOs (camelCase) automatically using `.withMapper()`:
 
 #### AutoMapper - Convention-based Mapping
 
 Automatically converts keys between snake_case and camelCase:
-
-```typescript
-import { AutoMapper } from 'frix';
-
-// Define your DTO class
-class UserDTO {
-  id!: number;
-  userName!: string;
-  createdAt!: Date;
-  kycStatus!: string;
-
-  constructor(data: Partial<UserDTO>) {
-    Object.assign(this, data);
-  }
-}
-
-// Create mapper with class constructor (returns instances)
-const mapper = new AutoMapper<UserRow, UserDTO>(UserDTO);
-
-// Convert row to DTO
-const row = { id: 1, user_name: 'alice', created_at: new Date(), kyc_status: 'VERIFIED' };
-const dto = mapper.toDto(row);
-// → UserDTO { id: 1, userName: 'alice', createdAt: Date, kycStatus: 'VERIFIED' }
-
-// Convert DTO back to row
-const newRow = mapper.toRow(dto);
-// → { id: 1, user_name: 'alice', created_at: Date, kyc_status: 'VERIFIED' }
-```
-
-For plain objects without a class:
-
-```typescript
-interface UserDTO {
-  id: number;
-  userName: string;
-  createdAt: Date;
-  kycStatus: string;
-}
-
-// Create mapper without constructor (returns plain objects)
-const mapper = new AutoMapper<UserRow, UserDTO>();
-
-const dto = mapper.toDto(row);
-// → { id: 1, userName: 'alice', createdAt: Date, kycStatus: 'VERIFIED' }
-```
-
-#### CustomMapper - Explicit Transformations
-
-For custom mapping logic like combining fields or type conversions:
-
-```typescript
-import { CustomMapper } from 'frix';
-
-interface UserRow {
-  id: number;
-  first_name: string;
-  last_name: string;
-  status: 'ACTIVE' | 'INACTIVE';
-}
-
-interface UserDTO {
-  id: number;
-  fullName: string;
-  isActive: boolean;
-}
-
-const mapper = new CustomMapper<UserRow, UserDTO>({
-  toDto: (row) => ({
-    id: row.id,
-    fullName: `${row.first_name} ${row.last_name}`,
-    isActive: row.status === 'ACTIVE',
-  }),
-  toRow: (dto) => ({
-    id: dto.id,
-    first_name: dto.fullName.split(' ')[0] || '',
-    last_name: dto.fullName.split(' ')[1] || '',
-    status: dto.isActive ? 'ACTIVE' : 'INACTIVE',
-  }),
-});
-
-const row = { id: 1, first_name: 'Alice', last_name: 'Smith', status: 'ACTIVE' };
-const dto = mapper.toDto(row);
-// → { id: 1, fullName: 'Alice Smith', isActive: true }
-```
-
-#### Integrated Repository Mapping with `.withMapper()`
-
-Create repositories that automatically convert between database rows and DTOs:
 
 ```typescript
 import { createRepository, AutoMapper } from 'frix';
@@ -434,6 +346,59 @@ Chain with `.extend<T>()` for custom queries (`.withMapper()` must be last):
 const repo = createRepository(db, 'users')
   .extend<UserQueries>()    // Add custom query types
   .withMapper(mapper);       // Terminal operation - returns DTOs
+```
+
+#### CustomMapper - Explicit Transformations
+
+For custom mapping logic like combining fields or type conversions:
+
+```typescript
+import { createRepository, CustomMapper } from 'frix';
+
+const mapper = new CustomMapper<UserRow, UserSummaryDTO>({
+  toDto: (row) => ({
+    id: row.id,
+    fullName: `${row.first_name} ${row.last_name}`,
+    isActive: row.status === 'ACTIVE',
+  }),
+  toRow: (dto) => ({
+    id: dto.id,
+    first_name: dto.fullName.split(' ')[0] || '',
+    last_name: dto.fullName.split(' ')[1] || '',
+    status: dto.isActive ? 'ACTIVE' : 'INACTIVE',
+  }),
+});
+
+const repo = createRepository(db, 'users').withMapper(mapper);
+```
+
+### Pagination
+
+All `findAllBy` methods support pagination via `limit` and `offset` options:
+
+```typescript
+// Basic pagination
+const page1 = await userRepo.findAllByStatus('ACTIVE', { limit: 10 });
+const page2 = await userRepo.findAllByStatus('ACTIVE', { limit: 10, offset: 10 });
+const page3 = await userRepo.findAllByStatus('ACTIVE', { limit: 10, offset: 20 });
+
+// Combined with ordering
+const sorted = await userRepo.findAllByStatusOrderByNameAsc('ACTIVE', { limit: 10 });
+
+// With comparison operators
+const recent = await userRepo.findAllByCreatedAtGreaterThan(lastWeek, { limit: 50 });
+
+// Pagination helper example
+async function getUsers(status: string, page: number, pageSize = 20) {
+  return userRepo.findAllByStatus(status, {
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  });
+}
+
+// Get total for pagination UI
+const total = await userRepo.count({ status: 'ACTIVE' });
+const totalPages = Math.ceil(total / pageSize);
 ```
 
 ### Health Check
