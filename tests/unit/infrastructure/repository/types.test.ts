@@ -1,5 +1,10 @@
+import type { ColumnType, Generated } from 'kysely';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type { Repository } from '../../../../src/infrastructure/repository/types';
+import type {
+  Repository,
+  Unwrap,
+  UnwrapRow,
+} from '../../../../src/infrastructure/repository/types';
 
 /**
  * Type-level tests for repository method name generation.
@@ -156,6 +161,291 @@ describe('Repository Types - Snake to Camel Case Conversion', () => {
       // The actual runtime tests are in create-repository.test.ts
       // These type tests verify compile-time autocomplete
       expect(true).toBe(true);
+    });
+  });
+});
+
+describe('Type Unwrapping - Kysely Generated and ColumnType', () => {
+  describe('Unwrap<T> - Single Type Unwrapping', () => {
+    it('should unwrap Generated<number> to number', () => {
+      type Result = Unwrap<Generated<number>>;
+      expectTypeOf<Result>().toEqualTypeOf<number>();
+    });
+
+    it('should unwrap Generated<string> to string', () => {
+      type Result = Unwrap<Generated<string>>;
+      expectTypeOf<Result>().toEqualTypeOf<string>();
+    });
+
+    it('should unwrap Generated<Date> to Date', () => {
+      type Result = Unwrap<Generated<Date>>;
+      expectTypeOf<Result>().toEqualTypeOf<Date>();
+    });
+
+    it('should unwrap ColumnType<Date, string, never> to Date', () => {
+      type Result = Unwrap<ColumnType<Date, string, never>>;
+      expectTypeOf<Result>().toEqualTypeOf<Date>();
+    });
+
+    it('should unwrap ColumnType<Record<string, unknown>, string, string> to Record', () => {
+      type Result = Unwrap<ColumnType<Record<string, unknown>, string, string>>;
+      expectTypeOf<Result>().toEqualTypeOf<Record<string, unknown>>();
+    });
+
+    it('should preserve primitive string type (no unwrapping needed)', () => {
+      type Result = Unwrap<string>;
+      expectTypeOf<Result>().toEqualTypeOf<string>();
+    });
+
+    it('should preserve primitive number type (no unwrapping needed)', () => {
+      type Result = Unwrap<number>;
+      expectTypeOf<Result>().toEqualTypeOf<number>();
+    });
+
+    it('should preserve primitive boolean type (no unwrapping needed)', () => {
+      type Result = Unwrap<boolean>;
+      expectTypeOf<Result>().toEqualTypeOf<boolean>();
+    });
+
+    it('should preserve Date type (no unwrapping needed)', () => {
+      type Result = Unwrap<Date>;
+      expectTypeOf<Result>().toEqualTypeOf<Date>();
+    });
+
+    it('should preserve nullable types: number | null', () => {
+      type Result = Unwrap<number | null>;
+      expectTypeOf<Result>().toEqualTypeOf<number | null>();
+    });
+
+    it('should preserve nullable types: string | null', () => {
+      type Result = Unwrap<string | null>;
+      expectTypeOf<Result>().toEqualTypeOf<string | null>();
+    });
+
+    it('should preserve undefined types: number | undefined', () => {
+      type Result = Unwrap<number | undefined>;
+      expectTypeOf<Result>().toEqualTypeOf<number | undefined>();
+    });
+
+    it('should unwrap Generated in union: Generated<number> | null', () => {
+      type Result = Unwrap<Generated<number> | null>;
+      // Generated<number> unwraps to number, then union with null
+      expectTypeOf<Result>().toEqualTypeOf<number | null>();
+    });
+
+    it('should preserve union types: "ACTIVE" | "INACTIVE"', () => {
+      type Result = Unwrap<'ACTIVE' | 'INACTIVE'>;
+      expectTypeOf<Result>().toEqualTypeOf<'ACTIVE' | 'INACTIVE'>();
+    });
+  });
+
+  describe('UnwrapRow<Row> - Full Row Type Unwrapping', () => {
+    interface TestTableWithGenerated {
+      id: Generated<number>;
+      email: string;
+      status: 'ACTIVE' | 'INACTIVE';
+      score: number | null;
+      created_at: Generated<Date>;
+      updated_at: Generated<Date> | null;
+    }
+
+    it('should unwrap all Generated fields in a table', () => {
+      type Result = UnwrapRow<TestTableWithGenerated>;
+
+      expectTypeOf<Result>().toEqualTypeOf<{
+        id: number;
+        email: string;
+        status: 'ACTIVE' | 'INACTIVE';
+        score: number | null;
+        created_at: Date;
+        updated_at: Date | null;
+      }>();
+    });
+
+    it('should preserve primitives in unwrapped row', () => {
+      type Result = UnwrapRow<TestTableWithGenerated>;
+
+      expectTypeOf<Result['email']>().toEqualTypeOf<string>();
+      expectTypeOf<Result['status']>().toEqualTypeOf<'ACTIVE' | 'INACTIVE'>();
+    });
+
+    it('should unwrap Generated<number> to number in row', () => {
+      type Result = UnwrapRow<TestTableWithGenerated>;
+
+      expectTypeOf<Result['id']>().toEqualTypeOf<number>();
+    });
+
+    it('should unwrap Generated<Date> to Date in row', () => {
+      type Result = UnwrapRow<TestTableWithGenerated>;
+
+      expectTypeOf<Result['created_at']>().toEqualTypeOf<Date>();
+    });
+
+    it('should preserve nullable fields in unwrapped row', () => {
+      type Result = UnwrapRow<TestTableWithGenerated>;
+
+      expectTypeOf<Result['score']>().toEqualTypeOf<number | null>();
+      expectTypeOf<Result['updated_at']>().toEqualTypeOf<Date | null>();
+    });
+
+    it('should handle table with no Generated fields', () => {
+      interface SimpleTable {
+        id: number;
+        name: string;
+        active: boolean;
+      }
+
+      type Result = UnwrapRow<SimpleTable>;
+
+      expectTypeOf<Result>().toEqualTypeOf<{
+        id: number;
+        name: string;
+        active: boolean;
+      }>();
+    });
+
+    it('should handle table with ColumnType fields', () => {
+      interface TableWithColumnType {
+        id: Generated<number>;
+        metadata: ColumnType<Record<string, unknown>, string, string>;
+        email: string;
+      }
+
+      type Result = UnwrapRow<TableWithColumnType>;
+
+      expectTypeOf<Result>().toEqualTypeOf<{
+        id: number;
+        metadata: Record<string, unknown>;
+        email: string;
+      }>();
+    });
+  });
+
+  describe('Repository Method Signatures with Unwrapped Types', () => {
+    interface UserTableWithGenerated {
+      id: Generated<number>;
+      email: string;
+      name: string;
+      status: 'ACTIVE' | 'INACTIVE';
+      score: number | null;
+      created_at: Generated<Date>;
+    }
+
+    interface TestDB {
+      users: UserTableWithGenerated;
+    }
+
+    type UserRepo = Repository<TestDB, 'users'>;
+
+    it('findById should accept unwrapped primitive number (not Generated<number>)', () => {
+      type FindByIdParam = Parameters<UserRepo['findById']>[0];
+      expectTypeOf<FindByIdParam>().toEqualTypeOf<number>();
+    });
+
+    it('findById should return unwrapped row with primitive id', () => {
+      type Result = Awaited<ReturnType<UserRepo['findById']>>;
+
+      // Should return unwrapped row or null
+      expectTypeOf<Result>().toMatchTypeOf<{
+        id: number;
+        email: string;
+        name: string;
+        status: 'ACTIVE' | 'INACTIVE';
+        score: number | null;
+        created_at: Date;
+      } | null>();
+    });
+
+    it('findAll should return array of unwrapped rows', () => {
+      type Result = Awaited<ReturnType<UserRepo['findAll']>>;
+
+      expectTypeOf<Result>().toMatchTypeOf<
+        Array<{
+          id: number;
+          email: string;
+          created_at: Date;
+        }>
+      >();
+    });
+
+    it('findByEmail should accept primitive string', () => {
+      type FindByEmailParam = Parameters<UserRepo['findByEmail']>[0];
+      expectTypeOf<FindByEmailParam>().toEqualTypeOf<string>();
+    });
+
+    it('findByEmail should return unwrapped row | null', () => {
+      type Result = Awaited<ReturnType<UserRepo['findByEmail']>>;
+
+      expectTypeOf<Result>().toMatchTypeOf<{
+        id: number;
+        email: string;
+        created_at: Date;
+      } | null>();
+    });
+
+    it('findAllByStatus should accept primitive string', () => {
+      type FindAllByStatusParam = Parameters<UserRepo['findAllByStatus']>[0];
+      expectTypeOf<FindAllByStatusParam>().toEqualTypeOf<'ACTIVE' | 'INACTIVE'>();
+    });
+
+    it('findAllByStatus should return array of unwrapped rows', () => {
+      type Result = Awaited<ReturnType<UserRepo['findAllByStatus']>>;
+
+      expectTypeOf<Result>().toMatchTypeOf<
+        Array<{
+          id: number;
+          email: string;
+          status: 'ACTIVE' | 'INACTIVE';
+          created_at: Date;
+        }>
+      >();
+    });
+
+    it('update should accept primitive number for id parameter', () => {
+      type UpdateIdParam = Parameters<UserRepo['update']>[0];
+      expectTypeOf<UpdateIdParam>().toEqualTypeOf<number>();
+    });
+
+    it('update should return unwrapped row | null', () => {
+      type Result = Awaited<ReturnType<UserRepo['update']>>;
+
+      expectTypeOf<Result>().toMatchTypeOf<{
+        id: number;
+        email: string;
+        created_at: Date;
+      } | null>();
+    });
+
+    it('delete should accept primitive number for id parameter', () => {
+      type DeleteIdParam = Parameters<UserRepo['delete']>[0];
+      expectTypeOf<DeleteIdParam>().toEqualTypeOf<number>();
+    });
+
+    it('count should accept partial unwrapped row', () => {
+      type CountParam = Parameters<UserRepo['count']>[0];
+
+      expectTypeOf<CountParam>().toMatchTypeOf<
+        | {
+            id?: number;
+            email?: string;
+            status?: 'ACTIVE' | 'INACTIVE';
+            created_at?: Date;
+          }
+        | undefined
+      >();
+    });
+
+    it('exists should accept partial unwrapped row', () => {
+      type ExistsParam = Parameters<UserRepo['exists']>[0];
+
+      expectTypeOf<ExistsParam>().toMatchTypeOf<
+        | {
+            id?: number;
+            email?: string;
+            created_at?: Date;
+          }
+        | undefined
+      >();
     });
   });
 });
