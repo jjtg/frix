@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2025-11-26
+
+### Added
+
+- **Type-Safe Complex Queries via `.extend<T>()`**
+    - `createRepository(db, 'table').extend<Queries>()` - Add typed complex query methods
+    - `ExtendableRepository` type - Repository with extend capability
+    - Full autocomplete and type checking for multi-column finders, ordering, and comparison operators
+    - No more `@ts-expect-error` needed for complex queries
+    - Zero runtime overhead - extend() returns same repository instance
+    - Fully backward compatible - existing code works unchanged
+
+### Changed
+
+- `createRepository` now returns `ExtendableRepository` (superset of `Repository`)
+
+### Technical
+
+- 12 new type-level tests for `.extend<T>()`
+- 8 new runtime tests for extend behavior
+- Total tests: 302 passing
+
+
+
 ## [0.3.4] - 2025-11-26
 
 ### Added

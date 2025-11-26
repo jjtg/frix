@@ -2,6 +2,7 @@ export { createRepository } from './create-repository';
 export { parseFinderColumns, parseFinderMethod } from './parser';
 export type {
   Repository,
+  ExtendableRepository,
   BaseRepository,
   SimpleFinders,
   MultiFinders,
