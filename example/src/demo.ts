@@ -3,7 +3,6 @@ import { checkDatabaseHealth, withTransaction, RepositoryError, createRepository
 import { getDatabase } from './database.js';
 import type { Database, User, UserDTO } from './types.js';
 import { createUserRepository, createPostRepository } from './repositories/index.js';
-import { userAutoMapper, userSummaryMapper, postAutoMapper } from './mappers/index.js';
 
 async function main(): Promise<void> {
   console.log('╔══════════════════════════════════════════════════════════════╗');
@@ -245,42 +244,10 @@ async function main(): Promise<void> {
   console.log();
 
   // ========================================
-  // 10. DTO Mapping
+  // 10. Transactions
   // ========================================
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('10. DTO MAPPING (AutoMapper, CustomMapper)');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-  // Get a user for mapping demo
-  const userForMapping = await userRepo.findByEmail('alice@example.com');
-  if (userForMapping) {
-    // AutoMapper: snake_case -> camelCase
-    console.log('AutoMapper - Convention-based snake_case <-> camelCase');
-    console.log('  Database row:', {
-      id: userForMapping.id,
-      created_at: userForMapping.created_at,
-    });
-    const userDto = userAutoMapper.toDto(userForMapping);
-    console.log('  DTO (camelCase):', { id: userDto.id, createdAt: userDto.createdAt });
-
-    // CustomMapper: Custom transformation
-    console.log('\nCustomMapper - Custom transformation logic');
-    const userSummary = userSummaryMapper.toDto(userForMapping);
-    console.log('  User summary:', userSummary);
-
-    // Batch mapping (use map() to convert arrays)
-    console.log('\nBatch mapping - using map()');
-    const usersToMap = await userRepo.findAllByStatus('ACTIVE');
-    const userDtos = usersToMap.map((u) => userAutoMapper.toDto(u));
-    console.log('  Mapped', userDtos.length, 'users to DTOs');
-  }
-  console.log();
-
-  // ========================================
-  // 11. Transactions
-  // ========================================
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('11. TRANSACTIONS (withTransaction)');
+  console.log('10. TRANSACTIONS (withTransaction)');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   const author = await userRepo.findByEmail('alice@example.com');
@@ -328,19 +295,14 @@ async function main(): Promise<void> {
 
     const userPublished = await postRepo.findAllByUserIdAndPublished(authorId, true);
     console.log('  User published posts:', userPublished.length);
-
-    // Post DTO mapping
-    console.log('\nPost DTO mapping:');
-    const postDto = postAutoMapper.toDto(posts[0]);
-    console.log('  Post DTO:', { id: postDto.id, userId: postDto.userId, title: postDto.title });
   }
   console.log();
 
   // ========================================
-  // 12. Error Handling
+  // 11. Error Handling
   // ========================================
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('12. ERROR HANDLING (RepositoryError)');
+  console.log('11. ERROR HANDLING (RepositoryError)');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   console.log('Attempting to find non-existent user...');
@@ -364,10 +326,10 @@ async function main(): Promise<void> {
   console.log();
 
   // ========================================
-  // 13. Integrated Repository Mapping (.withMapper())
+  // 12. Integrated Repository Mapping (.withMapper())
   // ========================================
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('13. INTEGRATED REPOSITORY MAPPING (.withMapper())');
+  console.log('12. DTO MAPPING (.withMapper())');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   console.log('Create a mapped repository that returns DTOs automatically:');
