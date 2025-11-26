@@ -1,7 +1,58 @@
-import type { Insertable, RawBuilder, SelectQueryBuilder, Selectable, Updateable } from 'kysely';
+import type {
+  ColumnType,
+  Insertable,
+  RawBuilder,
+  SelectQueryBuilder,
+  Selectable,
+  Updateable,
+} from 'kysely';
 
 /** Extract row type from DB schema */
 export type RowOf<DB, TName extends keyof DB> = DB[TName];
+
+/**
+ * Unwrap Kysely types to their primitive "select" form.
+ *
+ * Extracts the underlying type from Kysely's ColumnType and Generated wrappers:
+ * - Generated<T> → T
+ * - ColumnType<Select, Insert, Update> → Select
+ * - Primitive types → unchanged
+ *
+ * @template T - The type to unwrap
+ *
+ * @example
+ * ```typescript
+ * Unwrap<Generated<number>>                      // => number
+ * Unwrap<ColumnType<Date, string, never>>        // => Date
+ * Unwrap<string>                                 // => string
+ * Unwrap<number | null>                          // => number | null
+ * ```
+ */
+export type Unwrap<T> = T extends ColumnType<infer S, unknown, unknown> ? S : T;
+
+/**
+ * Unwrap all fields in a database row type.
+ *
+ * Recursively unwraps ColumnType/Generated fields to their select types,
+ * making the row type match what you receive from SELECT queries.
+ *
+ * @template Row - The database row type to unwrap
+ *
+ * @example
+ * ```typescript
+ * interface UserTable {
+ *   id: Generated<number>;
+ *   email: string;
+ *   created_at: Generated<Date>;
+ * }
+ *
+ * type UnwrappedUser = UnwrapRow<UserTable>;
+ * // => { id: number; email: string; created_at: Date }
+ * ```
+ */
+export type UnwrapRow<Row> = {
+  [K in keyof Row]: Unwrap<Row[K]>;
+};
 
 /** Re-export Kysely utility types for user convenience */
 export type { Insertable, Selectable, Updateable };
@@ -27,36 +78,36 @@ export type SnakeToCamelCase<S extends string> = S extends `${infer First}_${inf
 
 /** Base repository methods */
 export type BaseRepository<Row, IdKey extends keyof Row = 'id' extends keyof Row ? 'id' : never> = {
-  findAll(): Promise<Row[]>;
-  findById(id: Row[IdKey]): Promise<Row | null>;
-  create(data: Omit<Row, IdKey>): Promise<Row>;
-  update(id: Row[IdKey], data: Partial<Omit<Row, IdKey>>): Promise<Row | null>;
-  delete(id: Row[IdKey]): Promise<boolean>;
-  save(data: Row | Omit<Row, IdKey>): Promise<Row>;
+  findAll(): Promise<UnwrapRow<Row>[]>;
+  findById(id: Unwrap<Row[IdKey]>): Promise<UnwrapRow<Row> | null>;
+  create(data: Insertable<Row>): Promise<UnwrapRow<Row>>;
+  update(id: Unwrap<Row[IdKey]>, data: Updateable<Row>): Promise<UnwrapRow<Row> | null>;
+  delete(id: Unwrap<Row[IdKey]>): Promise<boolean>;
+  save(data: Insertable<Row>): Promise<UnwrapRow<Row>>;
 };
 
 /** Batch operations */
-export type BatchOperations<Row, IdKey extends keyof Row> = {
+export type BatchOperations<Row> = {
   createMany(
-    data: Array<Omit<Row, IdKey>>,
+    data: Array<Insertable<Row>>,
     options?: CreateManyOptions & { skipReturn?: false }
-  ): Promise<Row[]>;
+  ): Promise<UnwrapRow<Row>[]>;
   createMany(
-    data: Array<Omit<Row, IdKey>>,
+    data: Array<Insertable<Row>>,
     options: CreateManyOptions & { skipReturn: true }
   ): Promise<CreateManyCountResult>;
   createMany(
-    data: Array<Omit<Row, IdKey>>,
+    data: Array<Insertable<Row>>,
     options?: CreateManyOptions
-  ): Promise<Row[] | CreateManyCountResult>;
-  updateMany(criteria: Partial<Row>, data: Partial<Omit<Row, IdKey>>): Promise<number>;
-  deleteMany(criteria: Partial<Row>): Promise<number>;
+  ): Promise<UnwrapRow<Row>[] | CreateManyCountResult>;
+  updateMany(criteria: Partial<UnwrapRow<Row>>, data: Updateable<Row>): Promise<number>;
+  deleteMany(criteria: Partial<UnwrapRow<Row>>): Promise<number>;
 };
 
 /** Utility methods */
 export type UtilityMethods<Row> = {
-  count(criteria?: Partial<Row>): Promise<number>;
-  exists(criteria?: Partial<Row>): Promise<boolean>;
+  count(criteria?: Partial<UnwrapRow<Row>>): Promise<number>;
+  exists(criteria?: Partial<UnwrapRow<Row>>): Promise<boolean>;
 };
 
 /** Query builder methods */
@@ -68,13 +119,15 @@ export type QueryBuilderMethods<DB, TName extends keyof DB & string, Row> = {
 /** Auto-generated single-column finders (returns single result) */
 export type SimpleFinders<Row> = {
   [K in keyof Row & string as `findBy${SnakeToCamelCase<K>}`]: (
-    value: Row[K]
-  ) => Promise<Row | null>;
+    value: Unwrap<Row[K]>
+  ) => Promise<UnwrapRow<Row> | null>;
 };
 
 /** Auto-generated multi-result finders (returns array) */
 export type MultiFinders<Row> = {
-  [K in keyof Row & string as `findAllBy${SnakeToCamelCase<K>}`]: (value: Row[K]) => Promise<Row[]>;
+  [K in keyof Row & string as `findAllBy${SnakeToCamelCase<K>}`]: (
+    value: Unwrap<Row[K]>
+  ) => Promise<UnwrapRow<Row>[]>;
 };
 
 /** Combined repository type */
@@ -84,7 +137,7 @@ export type Repository<
   Row = RowOf<DB, TName>,
   IdKey extends keyof Row & string = 'id' extends keyof Row & string ? 'id' : never,
 > = BaseRepository<Row, IdKey> &
-  BatchOperations<Row, IdKey> &
+  BatchOperations<Row> &
   UtilityMethods<Row> &
   QueryBuilderMethods<DB, TName, Row> &
   SimpleFinders<Row> &

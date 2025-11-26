@@ -1,8 +1,9 @@
-import type { Kysely } from 'kysely';
+import type { Generated, Kysely } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRepository } from '../../../../src';
 import { RepositoryError } from '../../../../src';
 import type { RepositoryErrorCode } from '../../../../src';
+import type { UnwrapRow } from '../../../../src/infrastructure/repository/types';
 
 // Helper to reduce repetition in error checking tests
 function expectRepositoryError(
@@ -23,7 +24,7 @@ function expectRepositoryError(
 
 // Test table type
 interface UserTable {
-  id: number;
+  id: Generated<number>;
   email: string;
   status: 'ACTIVE' | 'INACTIVE';
 }
@@ -32,8 +33,8 @@ interface TestDB {
   user: UserTable;
 }
 
-// Mock data
-const mockUsers: UserTable[] = [
+// Mock data (represents what comes back from database)
+const mockUsers: UnwrapRow<UserTable>[] = [
   { id: 1, email: 'test@example.com', status: 'ACTIVE' },
   { id: 2, email: 'other@example.com', status: 'INACTIVE' },
 ];
@@ -359,7 +360,7 @@ describe('createRepository', () => {
       mockDb._mockExecuteTakeFirstOrThrow.mockResolvedValue(newUser);
 
       const repo = createRepository(mockDb, 'user', { idColumn: 'email' });
-      const result = await repo.create({ id: 3, status: 'ACTIVE' });
+      const result = await repo.create({ email: 'new@test.com', status: 'ACTIVE' });
 
       expect(result).toEqual(newUser);
     });

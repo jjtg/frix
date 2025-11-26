@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2025-11-26
+
+### Added
+
+- **Type Unwrapping for Kysely Generated Types**
+  - `Unwrap<T>` utility type - Extracts primitive types from `Generated<T>` and `ColumnType<>`
+  - `UnwrapRow<Row>` utility type - Unwraps all fields in a database row type
+  - Repository methods now accept and return unwrapped primitive types instead of Kysely wrappers
+  - `findById(id: number)` instead of `findById(id: Generated<number>)`
+  - All finder methods work with primitives (number, string, Date, boolean)
+  - 33 new type-level tests verifying unwrapping behavior
+
+### Changed
+
+- **Breaking (Type-level only)**: Repository type signatures now use unwrapped types
+  - Parameters accept primitives: `Unwrap<Row[K]>` instead of `Row[K]`
+  - Return values use primitives: `UnwrapRow<Row>` instead of `Row`
+  - `create()` and `createMany()` accept `Insertable<Row>` (correct Kysely type)
+  - `update()` and `updateMany()` accept `Updateable<Row>` (correct Kysely type)
+  - No runtime changes - purely compile-time improvements
+
+### Fixed
+
+- Updated test table types to properly use `Generated<T>` for auto-generated fields
+- Fixed test mocks to use `UnwrapRow<T>` for returned data (represents SELECT results)
+- Corrected custom ID column test to provide proper insertable data
+
+### Technical
+
+- Zero runtime overhead (compile-time only transformations)
+- Backward compatible with simple types (non-Generated tables work unchanged)
+- Total tests: 282 passing (33 new type-level tests)
+- Coverage: 96.31% lines, 92.3% branches, 97.72% functions
+- Performance benchmarks:
+  - createMany (10k): ~118,000 ops/sec
+  - findAllBy: ~247,000 ops/sec
+  - count: ~4,139,000 ops/sec
+
 ## [0.3.3] - 2025-11-26
 
 ### Added

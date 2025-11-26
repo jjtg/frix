@@ -1,14 +1,14 @@
-import type { Kysely, Transaction } from 'kysely';
+import type { Generated, Kysely, Transaction } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { withTransaction } from '../../../../src/infrastructure/database';
 
 interface UserTable {
-  id: number;
+  id: Generated<number>;
   email: string;
 }
 
 interface OrderTable {
-  id: number;
+  id: Generated<number>;
   userId: number;
   total: number;
 }
