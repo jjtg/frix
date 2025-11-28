@@ -302,7 +302,6 @@ describe('MappedRepository', () => {
 
       const repo = createRepository(mockDb, 'users');
       const mapped = repo.withMapper(new AutoMapper<UnwrapRow<UserTable>, UserDTO>());
-      // @ts-expect-error - dynamic finders not fully typed
       const dto = await mapped.findByEmail('test@example.com');
 
       expect(dto).toHaveProperty('userName');
@@ -314,7 +313,6 @@ describe('MappedRepository', () => {
 
       const repo = createRepository(mockDb, 'users');
       const mapped = repo.withMapper(new AutoMapper<UnwrapRow<UserTable>, UserDTO>());
-      // @ts-expect-error - dynamic finders not fully typed
       const dtos = await mapped.findAllByStatus('ACTIVE');
 
       expect(Array.isArray(dtos)).toBe(true);
@@ -571,7 +569,6 @@ describe('MappedRepository', () => {
         .withMapper(new AutoMapper<UnwrapRow<UserTable>, UserDTO>());
 
       // Dynamic finder should work and return DTO
-      // @ts-expect-error - dynamic finders work at runtime
       const dto = await repo.findByEmailAndStatus('test@example.com', 'ACTIVE');
 
       expect(dto).toHaveProperty('userName');
@@ -589,7 +586,6 @@ describe('MappedRepository', () => {
         .extend<UserQueries>()
         .withMapper(new AutoMapper<UnwrapRow<UserTable>, UserDTO>());
 
-      // @ts-expect-error - dynamic finders work at runtime
       const dtos = await repo.findAllByStatusOrderByUserNameDesc('ACTIVE');
 
       expect(Array.isArray(dtos)).toBe(true);

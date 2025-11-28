@@ -1,6 +1,6 @@
 {
   "name": "@jt-dev/frix",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "A sturdy, easy-to-use TypeScript library for database operations with Kysely",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

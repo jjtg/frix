@@ -140,7 +140,6 @@ describe('MappedRepository Integration Tests', () => {
 
       const repo = createRepository(db, 'users').withMapper(new AutoMapper<UserRow, UserDTO>());
 
-      // @ts-expect-error - dynamic finder
       const user = await repo.findByEmail('finder@example.com');
 
       expect(user?.name).toBe('Finder User');
@@ -163,7 +162,6 @@ describe('MappedRepository Integration Tests', () => {
 
       const repo = createRepository(db, 'users').withMapper(new AutoMapper<UserRow, UserDTO>());
 
-      // @ts-expect-error - dynamic finder
       const activeUsers = await repo.findAllByStatus('ACTIVE');
 
       expect(activeUsers).toHaveLength(2);
@@ -510,7 +508,6 @@ describe('MappedRepository Integration Tests', () => {
         .extend<UserQueries>()
         .withMapper(new AutoMapper<UserRow, UserDTO>());
 
-      // @ts-expect-error - dynamic finder works at runtime
       const user = await repo.findByEmailAndStatus('chain1@example.com', 'ACTIVE');
 
       expect(user?.name).toBe('Alice');
@@ -531,12 +528,11 @@ describe('MappedRepository Integration Tests', () => {
         .extend<UserQueries>()
         .withMapper(new AutoMapper<UserRow, UserDTO>());
 
-      // @ts-expect-error - dynamic finder works at runtime
       const users = await repo.findAllByStatusOrderByNameAsc('ACTIVE');
 
-      expect(users[0].name).toBe('Apple');
-      expect(users[1].name).toBe('Mango');
-      expect(users[2].name).toBe('Zebra');
+      expect(users[0]?.name).toBe('Apple');
+      expect(users[1]?.name).toBe('Mango');
+      expect(users[2]?.name).toBe('Zebra');
       expect(users[0]).toHaveProperty('createdAt');
     });
   });
