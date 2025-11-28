@@ -153,6 +153,7 @@ export type Repository<
  * @template TName - Table name
  * @template Row - Row type (defaults to table's row type)
  * @template IdKey - Primary key column name
+ * @template Queries - Accumulated query types from .extend() calls
  *
  * @example
  * ```typescript
@@ -170,37 +171,44 @@ export type ExtendableRepository<
   TName extends keyof DB & string,
   Row = RowOf<DB, TName>,
   IdKey extends keyof Row & string = 'id' extends keyof Row & string ? 'id' : never,
-> = Repository<DB, TName, Row, IdKey> & {
-  /**
-   * Extends the repository with additional typed query methods.
-   *
-   * @template Queries - Interface defining complex query method signatures
-   * @returns Repository with base methods and custom query methods (chainable)
-   */
-  extend<Queries extends object>(): ExtendableRepository<DB, TName, Row, IdKey> & Queries;
+  // biome-ignore lint/complexity/noBannedTypes: Empty object is valid default for accumulated queries
+  Queries extends object = {},
+> = Repository<DB, TName, Row, IdKey> &
+  Queries & {
+    /**
+     * Extends the repository with additional typed query methods.
+     * Multiple calls accumulate query types.
+     *
+     * @template Q - Interface defining complex query method signatures
+     * @returns Repository with base methods and custom query methods (chainable)
+     */
+    extend<Q extends object>(): ExtendableRepository<DB, TName, Row, IdKey, Queries & Q>;
 
-  /**
-   * Creates a mapped repository that returns DTOs instead of rows.
-   * This is a terminal operation - no further chaining allowed.
-   *
-   * @template TDto - The DTO type to map to/from
-   * @param mapper - Mapper instance or transformer with toDto/toRow functions
-   * @returns MappedRepository that automatically converts between Row and TDto
-   *
-   * @example
-   * ```typescript
-   * const mappedRepo = createRepository(db, 'users')
-   *   .extend<UserQueries>()
-   *   .withMapper(new AutoMapper<UserRow, UserDTO>());
-   *
-   * // Now all operations work with DTOs
-   * const users = await mappedRepo.findAll(); // UserDTO[]
-   * ```
-   */
-  withMapper<TDto>(
-    mapper: Transformer<UnwrapRow<Row>, TDto>
-  ): MappedRepository<DB, TName, Row, IdKey, TDto>;
-};
+    /**
+     * Creates a mapped repository that returns DTOs instead of rows.
+     * This is a terminal operation - no further chaining allowed.
+     * Preserves all extended query types with return types mapped to TDto.
+     *
+     * @template TDto - The DTO type to map to/from
+     * @param mapper - Mapper instance or transformer with toDto/toRow functions
+     * @returns MappedRepository that automatically converts between Row and TDto
+     *
+     * @example
+     * ```typescript
+     * const mappedRepo = createRepository(db, 'users')
+     *   .extend<UserQueries>()
+     *   .withMapper(new AutoMapper<UserRow, UserDTO>());
+     *
+     * // Now all operations work with DTOs
+     * const users = await mappedRepo.findAll(); // UserDTO[]
+     * // Extended queries also return DTOs
+     * const user = await mappedRepo.findByEmailAndStatus('a@b.com', 'ACTIVE'); // UserDTO | null
+     * ```
+     */
+    withMapper<TDto>(
+      mapper: Transformer<UnwrapRow<Row>, TDto>
+    ): MappedRepositoryWithQueries<DB, TName, Row, IdKey, TDto, Queries>;
+  };
 
 /** Factory options */
 export interface RepositoryOptions<IdKey extends string> {
@@ -260,6 +268,53 @@ export type { RawBuilder, SelectQueryBuilder };
 // ============================================================================
 // Mapped Repository Types
 // ============================================================================
+
+/**
+ * Auto-generated single-column finders for MappedRepository (returns TDto).
+ * Same pattern as SimpleFinders but returns TDto instead of Row.
+ */
+export type MappedSimpleFinders<Row, TDto> = {
+  [K in keyof Row & string as `findBy${SnakeToCamelCase<K>}`]: (
+    value: Unwrap<Row[K]>
+  ) => Promise<TDto | null>;
+};
+
+/**
+ * Auto-generated multi-result finders for MappedRepository (returns TDto[]).
+ * Same pattern as MultiFinders but returns TDto[] instead of Row[].
+ * Includes optional QueryOptions for pagination.
+ */
+export type MappedMultiFinders<Row, TDto> = {
+  [K in keyof Row & string as `findAllBy${SnakeToCamelCase<K>}`]: (
+    value: Unwrap<Row[K]>,
+    options?: QueryOptions
+  ) => Promise<TDto[]>;
+};
+
+/**
+ * Transform a query interface's return types from Row to TDto.
+ *
+ * Transforms Promise return types:
+ * - Promise<Row | null> → Promise<TDto | null>
+ * - Promise<Row[]> → Promise<TDto[]>
+ * - Promise<Row> → Promise<TDto>
+ * - Other types (Promise<number>, Promise<boolean>, etc.) → unchanged
+ *
+ * @template Queries - Interface with query method signatures
+ * @template Row - The database row type to match
+ * @template TDto - The DTO type to transform to
+ */
+export type MapQueryReturnTypes<Queries, Row, TDto> = {
+  [K in keyof Queries]: Queries[K] extends (...args: infer Args) => Promise<infer R>
+    ? R extends Row | null
+      ? (...args: Args) => Promise<TDto | null>
+      : R extends Row[]
+        ? (...args: Args) => Promise<TDto[]>
+        : R extends Row
+          ? (...args: Args) => Promise<TDto>
+          : Queries[K] // Keep original (number, boolean, etc.)
+    : Queries[K];
+};
 
 /**
  * Bidirectional transformer for read/write operations.
@@ -324,7 +379,8 @@ export type MappedInsertable<TDto, IdKey extends string> = IdKey extends keyof T
  * const rawUser = await mappedRepo.raw.findById(1); // UserRow
  * ```
  */
-export type MappedRepository<
+/** Base mapped operations (without auto-generated finders) */
+type MappedBaseOperations<
   DB,
   TName extends keyof DB & string,
   Row,
@@ -364,3 +420,33 @@ export type MappedRepository<
   // Access to underlying unmapped repository
   raw: Repository<DB, TName, Row, IdKey>;
 };
+
+/**
+ * MappedRepository that includes auto-generated finders.
+ * This is the base mapped repository type without extended queries.
+ */
+export type MappedRepository<
+  DB,
+  TName extends keyof DB & string,
+  Row,
+  IdKey extends keyof Row & string,
+  TDto,
+> = MappedBaseOperations<DB, TName, Row, IdKey, TDto> &
+  MappedSimpleFinders<Row, TDto> &
+  MappedMultiFinders<Row, TDto>;
+
+/**
+ * MappedRepository that also preserves extended query types.
+ * Used when .extend<Queries>().withMapper() is called.
+ *
+ * @template Queries - The extended query interface from .extend<T>()
+ */
+export type MappedRepositoryWithQueries<
+  DB,
+  TName extends keyof DB & string,
+  Row,
+  IdKey extends keyof Row & string,
+  TDto,
+  Queries extends object,
+> = MappedRepository<DB, TName, Row, IdKey, TDto> &
+  MapQueryReturnTypes<Queries, UnwrapRow<Row>, TDto>;

@@ -1,8 +1,11 @@
 import type { ColumnType, Generated, Kysely } from 'kysely';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { createRepository } from '../../../../src';
+import { AutoMapper, createRepository } from '../../../../src';
 import type {
   ExtendableRepository,
+  MapQueryReturnTypes,
+  MappedRepository,
+  QueryOptions,
   Repository,
   Unwrap,
   UnwrapRow,
@@ -613,6 +616,198 @@ describe('ExtendableRepository and .extend<T>() Types', () => {
       expectTypeOf(repo.findByEmailAndStatus).toBeFunction();
       expectTypeOf(repo.findAllByStatusOrderByAgeDesc).toBeFunction();
       expectTypeOf(repo.findByAgeGreaterThan).toBeFunction();
+    });
+  });
+});
+
+/**
+ * Type-level tests for MappedRepository preserving extensions.
+ * These tests verify that .withMapper() preserves auto-generated finders
+ * and .extend<T>() query types.
+ */
+describe('MappedRepository with Extensions', () => {
+  interface UserTable {
+    id: Generated<number>;
+    email: string;
+    name: string;
+    status: 'ACTIVE' | 'INACTIVE';
+    created_at: Generated<Date>;
+  }
+
+  interface TestDB {
+    users: UserTable;
+  }
+
+  // Unwrapped row type (what SELECT returns)
+  interface UserRow {
+    id: number;
+    email: string;
+    name: string;
+    status: 'ACTIVE' | 'INACTIVE';
+    created_at: Date;
+  }
+
+  // DTO type (camelCase)
+  interface UserDTO {
+    id: number;
+    email: string;
+    name: string;
+    status: 'ACTIVE' | 'INACTIVE';
+    createdAt: Date;
+  }
+
+  // Complex queries interface
+  interface UserQueries {
+    findByEmailAndStatus(email: string, status: 'ACTIVE' | 'INACTIVE'): Promise<UserRow | null>;
+    findAllByStatusOrderByNameAsc(status: 'ACTIVE' | 'INACTIVE'): Promise<UserRow[]>;
+    countActiveUsers(): Promise<number>;
+  }
+
+  const mockDb = {} as Kysely<TestDB>;
+
+  describe('MappedRepository should include auto-generated finders', () => {
+    it('should have SimpleFinders returning TDto | null', () => {
+      type Repo = MappedRepository<TestDB, 'users', UserTable, 'id', UserDTO>;
+
+      // Should have findByEmail that returns UserDTO | null
+      expectTypeOf<Repo>().toHaveProperty('findByEmail');
+      expectTypeOf<Repo['findByEmail']>().toBeFunction();
+      expectTypeOf<Repo['findByEmail']>().parameter(0).toBeString();
+      expectTypeOf<Repo['findByEmail']>().returns.resolves.toEqualTypeOf<UserDTO | null>();
+    });
+
+    it('should have findByStatus returning TDto | null', () => {
+      type Repo = MappedRepository<TestDB, 'users', UserTable, 'id', UserDTO>;
+
+      expectTypeOf<Repo>().toHaveProperty('findByStatus');
+      expectTypeOf<Repo['findByStatus']>().returns.resolves.toEqualTypeOf<UserDTO | null>();
+    });
+
+    it('should have MultiFinders returning TDto[]', () => {
+      type Repo = MappedRepository<TestDB, 'users', UserTable, 'id', UserDTO>;
+
+      // Should have findAllByEmail that returns UserDTO[]
+      expectTypeOf<Repo>().toHaveProperty('findAllByEmail');
+      expectTypeOf<Repo['findAllByEmail']>().toBeFunction();
+      expectTypeOf<Repo['findAllByEmail']>().parameter(0).toBeString();
+      expectTypeOf<Repo['findAllByEmail']>().returns.resolves.toEqualTypeOf<UserDTO[]>();
+    });
+
+    it('should have findAllByStatus returning TDto[]', () => {
+      type Repo = MappedRepository<TestDB, 'users', UserTable, 'id', UserDTO>;
+
+      expectTypeOf<Repo>().toHaveProperty('findAllByStatus');
+      expectTypeOf<Repo['findAllByStatus']>().returns.resolves.toEqualTypeOf<UserDTO[]>();
+    });
+
+    it('MultiFinders should accept optional QueryOptions', () => {
+      type Repo = MappedRepository<TestDB, 'users', UserTable, 'id', UserDTO>;
+
+      // Second parameter should be optional QueryOptions
+      type FindAllByStatus = Repo['findAllByStatus'];
+      expectTypeOf<FindAllByStatus>().parameter(1).toEqualTypeOf<QueryOptions | undefined>();
+    });
+  });
+
+  describe('.withMapper() should preserve .extend<T>() query types', () => {
+    it('should have extended query methods after withMapper', () => {
+      const repo = createRepository(mockDb, 'users')
+        .extend<UserQueries>()
+        .withMapper(new AutoMapper<UserRow, UserDTO>());
+
+      // Extended methods should exist
+      expectTypeOf(repo).toHaveProperty('findByEmailAndStatus');
+      expectTypeOf(repo).toHaveProperty('findAllByStatusOrderByNameAsc');
+      expectTypeOf(repo).toHaveProperty('countActiveUsers');
+    });
+
+    it('extended query returning Row | null should return TDto | null', () => {
+      const repo = createRepository(mockDb, 'users')
+        .extend<UserQueries>()
+        .withMapper(new AutoMapper<UserRow, UserDTO>());
+
+      // findByEmailAndStatus should return UserDTO | null (not UserRow | null)
+      expectTypeOf(repo.findByEmailAndStatus).returns.resolves.toEqualTypeOf<UserDTO | null>();
+    });
+
+    it('extended query returning Row[] should return TDto[]', () => {
+      const repo = createRepository(mockDb, 'users')
+        .extend<UserQueries>()
+        .withMapper(new AutoMapper<UserRow, UserDTO>());
+
+      // findAllByStatusOrderByNameAsc should return UserDTO[] (not UserRow[])
+      expectTypeOf(repo.findAllByStatusOrderByNameAsc).returns.resolves.toEqualTypeOf<UserDTO[]>();
+    });
+
+    it('extended query returning primitives should stay unchanged', () => {
+      // Type-only test - verify the MapQueryReturnTypes utility preserves non-Row return types
+      // We can't test countActiveUsers at runtime (it's not auto-implemented),
+      // but we can verify the type transformation is correct
+      type MappedQueries = MapQueryReturnTypes<UserQueries, UserRow, UserDTO>;
+
+      // countActiveUsers returns Promise<number> - should stay as Promise<number>
+      expectTypeOf<MappedQueries['countActiveUsers']>().toEqualTypeOf<() => Promise<number>>();
+    });
+
+    it('should preserve parameter types from extended queries', () => {
+      const repo = createRepository(mockDb, 'users')
+        .extend<UserQueries>()
+        .withMapper(new AutoMapper<UserRow, UserDTO>());
+
+      // Parameters should be preserved
+      expectTypeOf(repo.findByEmailAndStatus).parameter(0).toBeString();
+      expectTypeOf(repo.findByEmailAndStatus).parameter(1).toEqualTypeOf<'ACTIVE' | 'INACTIVE'>();
+    });
+  });
+
+  describe('.withMapper() without .extend() should still work', () => {
+    it('should work with just withMapper (no extend)', () => {
+      const repo = createRepository(mockDb, 'users').withMapper(new AutoMapper<UserRow, UserDTO>());
+
+      // Base methods should return DTOs
+      expectTypeOf(repo.findById).returns.resolves.toEqualTypeOf<UserDTO | null>();
+      expectTypeOf(repo.findAll).returns.resolves.toEqualTypeOf<UserDTO[]>();
+
+      // Auto-generated finders should return DTOs
+      expectTypeOf(repo.findByEmail).returns.resolves.toEqualTypeOf<UserDTO | null>();
+      expectTypeOf(repo.findAllByStatus).returns.resolves.toEqualTypeOf<UserDTO[]>();
+    });
+
+    it('should preserve raw repository access', () => {
+      const repo = createRepository(mockDb, 'users').withMapper(new AutoMapper<UserRow, UserDTO>());
+
+      // raw should return Row types
+      expectTypeOf(repo.raw).toHaveProperty('findById');
+      expectTypeOf(repo.raw).toHaveProperty('findByEmail');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle empty Queries type', () => {
+      const repo = createRepository(mockDb, 'users')
+        // biome-ignore lint/complexity/noBannedTypes: testing empty type
+        .extend<{}>()
+        .withMapper(new AutoMapper<UserRow, UserDTO>());
+
+      // Base methods should still work
+      expectTypeOf(repo.findById).returns.resolves.toEqualTypeOf<UserDTO | null>();
+      expectTypeOf(repo.findAll).returns.resolves.toEqualTypeOf<UserDTO[]>();
+    });
+
+    it('should handle multiple extend calls before withMapper', () => {
+      interface MoreQueries {
+        findByNameLike(pattern: string): Promise<UserRow[]>;
+      }
+
+      const repo = createRepository(mockDb, 'users')
+        .extend<UserQueries>()
+        .extend<MoreQueries>()
+        .withMapper(new AutoMapper<UserRow, UserDTO>());
+
+      // Both query sets should be available and mapped
+      expectTypeOf(repo).toHaveProperty('findByEmailAndStatus');
+      expectTypeOf(repo).toHaveProperty('findByNameLike');
+      expectTypeOf(repo.findByNameLike).returns.resolves.toEqualTypeOf<UserDTO[]>();
     });
   });
 });
